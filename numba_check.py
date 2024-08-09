@@ -1,6 +1,7 @@
 
 import timeit 
 import asyncio
+import os 
 
 from src.utils import batched
 from dataclasses import dataclass
@@ -31,13 +32,18 @@ async def timer():
     yield e
     e.time = perf_counter() - t
 
+cpus_avail = os.sched_getaffinity(0)
+print(f"Have the following CPU cores: {cpus_avail}") 
+
 
 layers_to_use = ["neighbor", "colleague"]
-layers_to_use = ["education", "household"]
-walk_len = 5
-sample_size = 200_000
+#layers_to_use = ["education", "household", "family", "colleague", "neighbor"]
+layers_to_use = ["education", "household", "family", "colleague", "neighbor"]
+walk_len = 50
+sample_size = 900_000
 N_RUNS = 2 # number of timing runs
-N_WORKERS = 8 # number of workers to parallelize over
+N_WORKERS = len(cpus_avail) # number of workers to parallelize over
+
 
 
 print("loading data")
@@ -64,23 +70,24 @@ async def main():
 
     # walks for multiple nodes
     print("timing multiple runs")
-    myfunc = "create_walks_python(users[:sample_size], walk_len, node_layer_dict, layers)"
-    t_mult_python = timeit.timeit(myfunc, globals=globals(), number=N_RUNS)
+    #myfunc = "create_walks_python(users[:sample_size], walk_len, node_layer_dict, layers)"
+    #t_mult_python = timeit.timeit(myfunc, globals=globals(), number=N_RUNS)
     # _ = create_walks_python(users[:sample_size], walk_len, node_layer_dict, layers)
     # compile
     _ = create_walks_numba(users_numba[:sample_size], walk_len, node_layer_dict_numba, layers_numba)
     myfunc = "create_walks_numba(users_numba[:sample_size], walk_len, node_layer_dict_numba, layers_numba)"
     t_mult_numba = timeit.timeit(myfunc, globals=globals(), number=N_RUNS)
-
-    print(f"multiple runs, absolute: {t_mult_python} for python, {t_mult_numba} for numba")
-    print(f"multiple runs numba/python: {t_mult_numba/t_mult_python}")
+    
+    print(f"multiple runs, absolute for numba: {t_mult_numba}")
+    #print(f"multiple runs, absolute: {t_mult_python} for python, {t_mult_numba} for numba")
+    #print(f"multiple runs numba/python: {t_mult_numba/t_mult_python}")
 
     # _ = create_walks_numba(users_numba[:sample_size], walk_len, node_layer_dict_numba, layers_numba)
 
 
     print("timing parallel runs")
     def walks_wrapper(users):
-        return create_walks_numba(users, 5, node_layer_dict_numba, layers_numba, 0.8)
+        return create_walks_numba(users, walk_len, node_layer_dict_numba, layers_numba, 0.8)
 
     _ = walks_wrapper(users[:10])
 

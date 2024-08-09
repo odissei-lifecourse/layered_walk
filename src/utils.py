@@ -6,8 +6,8 @@ import numpy as np
 from itertools import islice, zip_longest
 
 
-root = "/home/flavio/datasets/synthetic_layered_graph_1mil/"
-
+root = "/home/flavio/datasets/synthetic_layered_graph_1mil/" # local
+root = "/projects/0/prjs1019/data/graph/processed/"  # snellius
 
 def load_data(layer_types: list = ["neighbor", "colleague"]):
     """Load layered network data
@@ -27,7 +27,7 @@ def load_data(layer_types: list = ["neighbor", "colleague"]):
     assert all([layer in possible_layers for layer in layer_types])
     layers = []
     for ltype in layer_types:
-        with open(root + "fake_" + ltype + "_adjacency_dict.pkl", "rb") as pkl_file:
+        with open(root +  ltype + "_adjacency_dict.pkl", "rb") as pkl_file:
             edges = dict(pickle.load(pkl_file))
             # edges_keep = dict((u, edges[u]) for u in users)
             layers.append(edges)

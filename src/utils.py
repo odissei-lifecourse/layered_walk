@@ -1,5 +1,5 @@
 
-import pickle 
+import _pickle 
 from numba.typed import Dict, List
 from numba.core import types
 import numpy as np
@@ -26,7 +26,7 @@ def load_data(data_dir, layer_types: list = ["neighbor", "colleague"]):
     layers = []
     for ltype in layer_types:
         with Path(data_dir + ltype + "_adjacency_dict.pkl").open("rb") as pkl_file:
-            edges = dict(pickle.load(pkl_file))
+            edges = dict(_pickle.load(pkl_file))
             # edges_keep = dict((u, edges[u]) for u in users)
             layers.append(edges)
 

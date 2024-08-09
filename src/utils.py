@@ -4,12 +4,10 @@ from numba.typed import Dict, List
 from numba.core import types
 import numpy as np
 from itertools import islice, zip_longest
+from pathlib import Path
 
 
-root = "/home/flavio/datasets/synthetic_layered_graph_1mil/" # local
-root = "/projects/0/prjs1019/data/graph/processed/"  # snellius
-
-def load_data(layer_types: list = ["neighbor", "colleague"]):
+def load_data(data_dir, layer_types: list = ["neighbor", "colleague"]):
     """Load layered network data
     
     Args:
@@ -27,7 +25,7 @@ def load_data(layer_types: list = ["neighbor", "colleague"]):
     assert all([layer in possible_layers for layer in layer_types])
     layers = []
     for ltype in layer_types:
-        with open(root +  ltype + "_adjacency_dict.pkl", "rb") as pkl_file:
+        with Path(data_dir + ltype + "_adjacency_dict.pkl").open("rb") as pkl_file:
             edges = dict(pickle.load(pkl_file))
             # edges_keep = dict((u, edges[u]) for u in users)
             layers.append(edges)

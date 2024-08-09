@@ -2,6 +2,7 @@
 import timeit 
 import asyncio
 import argparse
+import numpy as np
 import os 
 
 from src.utils import batched
@@ -83,6 +84,8 @@ async def main():
 
     print("loading data")
     users, layers, node_layer_dict = load_data(DATA_DIR, LAYERS)
+    rng = np.random.default_rng(seed=95359385252)
+    users = list(rng.choice(users, size=SAMPLE_SIZE))
 
     # In order to use numba, we need to store the data in numba-compatible objects
     print("converting to numba")
@@ -115,12 +118,12 @@ async def main():
     # ## Walks for multiple nodes
     print("timing multiple runs")
     def wrapper():
-        return create_walks_python(users[:SAMPLE_SIZE], WALK_LEN, node_layer_dict, layers)
+        return create_walks_python(users, WALK_LEN, node_layer_dict, layers)
     #t_mult_python = timeit.timeit(wrapper, number=N_RUNS)
 
     _ = create_walks_numba(users_numba[:5], 5, node_layer_dict_numba, layers_numba)
     def wrapper():
-        return create_walks_numba(users_numba[:SAMPLE_SIZE], WALK_LEN, node_layer_dict_numba, layers_numba)
+        return create_walks_numba(users_numba, WALK_LEN, node_layer_dict_numba, layers_numba)
     t_mult_numba = timeit.timeit(wrapper, number=N_RUNS)
     
     print(f"multiple runs, absolute for numba: {t_mult_numba}")
@@ -134,12 +137,12 @@ async def main():
 
     _ = walks_wrapper(users[:10])
 
-    async def create_walks_parallel(users, n, n_workers):
-        result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users[:n], n//n_workers)))
+    async def create_walks_parallel(users, n_workers):
+        result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
     
     async with timer() as t:  # not sure this parallelizes. speed is very volatile 
-        result = await create_walks_parallel(users, SAMPLE_SIZE, N_WORKERS)
+        result = await create_walks_parallel(users, N_WORKERS)
 
     print(f"that took {t.time} seconds")
 

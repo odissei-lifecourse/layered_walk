@@ -141,10 +141,14 @@ async def main():
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
     
-    async with timer() as t:  # not sure this parallelizes. speed is very volatile 
-        result = await create_walks_parallel(users, N_WORKERS)
-
-    print(f"that took {t.time} seconds")
+    workers = [N_WORKERS/2**i for i in range(3)]
+    if DRY_RUN:
+        workers = [N_WORKERS]
+    
+    for n_workers in workers:
+        async with timer() as t:  # not sure this parallelizes. speed is very volatile 
+            result = await create_walks_parallel(users, n_workers)
+        (f"with {n_workers}, it took {t.time} seconds")
 
 
     n_walks = sum(len(x) for x in result)

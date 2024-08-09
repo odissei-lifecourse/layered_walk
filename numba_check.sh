@@ -2,7 +2,7 @@
 #
 #SBATCH --job-name=numba_check
 #SBATCH --ntasks 1
-#SBATCH --cpus-per-task 8 
+#SBATCH --cpus-per-task 64 
 #SBATCH --nodes=1
 #SBATCH --time=00:30:00
 #SBATCH --mem=20G

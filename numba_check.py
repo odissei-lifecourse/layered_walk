@@ -70,7 +70,7 @@ dat_dir = {
 
 async def main():
 
-    N_RUNS = 2 # number of timing runs
+    N_RUNS = 10 # number of timing runs
 
     args = parse_args()
     DRY_RUN = args.dry_run
@@ -148,10 +148,14 @@ async def main():
     
     times = {}
     for n_workers in workers:
-        async with timer() as t:  # not sure this parallelizes. speed is very volatile 
-            result = await create_walks_parallel(users, n_workers)
-            
-        times[n_workers] = t.time
+        data = []
+        for _ in range(N_RUNS):
+            async with timer() as t:  # not sure this parallelizes. speed is very volatile 
+                result = await create_walks_parallel(users, n_workers)
+           
+            data.append(t.time)
+
+        times[n_workers] = np.mean(data)
     
     print(f"n workers and times: {times}")
 

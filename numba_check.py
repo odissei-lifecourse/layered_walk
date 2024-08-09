@@ -116,7 +116,7 @@ async def main():
     print("timing multiple runs")
     def wrapper():
         return create_walks_python(users[:SAMPLE_SIZE], WALK_LEN, node_layer_dict, layers)
-    t_mult_python = timeit.timeit(wrapper, number=N_RUNS)
+    #t_mult_python = timeit.timeit(wrapper, number=N_RUNS)
 
     _ = create_walks_numba(users_numba[:5], 5, node_layer_dict_numba, layers_numba)
     def wrapper():
@@ -124,8 +124,8 @@ async def main():
     t_mult_numba = timeit.timeit(wrapper, number=N_RUNS)
     
     print(f"multiple runs, absolute for numba: {t_mult_numba}")
-    print(f"multiple runs, absolute: {t_mult_python} for python, {t_mult_numba} for numba")
-    print(f"multiple runs numba/python: {t_mult_numba/t_mult_python}")
+    #print(f"multiple runs, absolute: {t_mult_python} for python, {t_mult_numba} for numba")
+    #print(f"multiple runs numba/python: {t_mult_numba/t_mult_python}")
 
 
     print("timing parallel runs")

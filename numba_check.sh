@@ -2,7 +2,7 @@
 #
 #SBATCH --job-name=numba_check
 #SBATCH --ntasks 1
-#SBATCH --cpus-per-task 32 
+#SBATCH --cpus-per-task 8 
 #SBATCH --nodes=1
 #SBATCH --time=00:30:00
 #SBATCH --mem=20G
@@ -21,7 +21,7 @@ module load numba/0.58.1-foss-2023a
 
 source .venv/bin/activate 
 
-python numba_check.py
+python numba_check.py --dry-run --location snellius
 
 
 

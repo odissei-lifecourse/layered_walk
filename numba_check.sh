@@ -21,7 +21,7 @@ module load numba/0.58.1-foss-2023a
 
 source .venv/bin/activate 
 
-python numba_check.py --dry-run --location snellius
+python numba_check.py --location snellius
 
 
 

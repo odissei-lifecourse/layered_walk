@@ -146,9 +146,11 @@ async def main():
 
     n_walks = sum(len(x) for x in result)
     # NOTE: this is not correct b/c there is no padding. (I think) The walk may just stop when there are no more nodes to go to. 
-    final_length = len(result[0][0]) # TODO: it seems to fail sometimes! does it have to do with the network type?
+    # when exactly should it stop? should it not bounce instead? -- unless we have someone that is not connected to *anyone*?
+    walk_lengths = [len(x) for x in result[0]]
+    avg_lengths = sum(walk_lengths) / len(walk_lengths) # TODO: it seems to fail sometimes! does it have to do with the network type?
 
-    print(f"we created {n_walks} walks of length {final_length}")
+    print(f"we created {n_walks} walks with average length of {avg_lengths}")
 
 
 

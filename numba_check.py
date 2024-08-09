@@ -4,6 +4,7 @@ import asyncio
 import argparse
 import numpy as np
 import os 
+from math import log2
 
 from src.utils import batched
 from dataclasses import dataclass
@@ -141,14 +142,18 @@ async def main():
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
     
-    workers = [N_WORKERS/2**i for i in range(3)]
+    workers = [2**i for i in range(int(log2(N_WORKERS))+1)]
     if DRY_RUN:
         workers = [N_WORKERS]
     
+    times = {}
     for n_workers in workers:
         async with timer() as t:  # not sure this parallelizes. speed is very volatile 
             result = await create_walks_parallel(users, n_workers)
-        (f"with {n_workers}, it took {t.time} seconds")
+            
+        times[n_workers] = t.time
+    
+    print(f"n workers and times: {times}")
 
 
     n_walks = sum(len(x) for x in result)

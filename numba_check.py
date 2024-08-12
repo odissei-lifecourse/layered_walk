@@ -62,7 +62,7 @@ config_dict = {
     }
 }
 
-dat_dir = {
+data_dir = {
     "snellius": "/projects/0/prjs1019/data/graph/processed/",
     "local": "/home/flavio/datasets/synthetic_layered_graph_1mil/"
 }
@@ -74,7 +74,7 @@ async def main():
 
     args = parse_args()
     DRY_RUN = args.dry_run
-    DATA_DIR = dat_dir[args.location]
+    DATA_DIR = data_dir[args.location]
     config = config_dict["big"]
     if DRY_RUN:
         config = config_dict["small"]
@@ -91,7 +91,7 @@ async def main():
     # In order to use numba, we need to store the data in numba-compatible objects
     print("converting to numba")
     users_numba, layers_numba, node_layer_dict_numba = convert_to_numba(users, layers, node_layer_dict)
-
+    
 
     cpus_avail = os.sched_getaffinity(0)
     print(f"Have the following CPU cores: {cpus_avail}") 

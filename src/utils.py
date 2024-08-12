@@ -81,7 +81,8 @@ def convert_to_numba(users: list, layers: list, node_layer_dict: dict, ):
         for k, v in layer.items():
             k = types.int32(k)
             layer_numba[k] = np.asarray(v, dtype=np.int32)
-            layers_numba.append(layer_numba)
+    
+        layers_numba.append(layer_numba)
 
     return users_numba, layers_numba, node_layer_dict_numba
 

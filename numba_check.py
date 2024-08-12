@@ -51,7 +51,7 @@ def parse_args():
 
 config_dict = {
     "big": {
-        "layers":  ["education", "household", "family", "colleague", "neighbor"],
+        "layers":  ["classmate", "household", "family", "colleague", "neighbor"],
         "walk_len": 50,
         "sample_size": 900_000
     },
@@ -151,7 +151,7 @@ async def main():
         data = []
         for _ in range(N_RUNS):
             async with timer() as t:  # not sure this parallelizes. speed is very volatile 
-                result = await create_walks_parallel(users, n_workers)
+                result = await create_walks_parallel(users_numba, n_workers)
            
             data.append(t.time)
 
@@ -161,8 +161,6 @@ async def main():
 
 
     n_walks = sum(len(x) for x in result)
-    # NOTE: this is not correct b/c there is no padding. (I think) The walk may just stop when there are no more nodes to go to. 
-    # when exactly should it stop? should it not bounce instead? -- unless we have someone that is not connected to *anyone*?
     walk_lengths = [len(x) for x in result[0]]
     avg_lengths = sum(walk_lengths) / len(walk_lengths) # TODO: it seems to fail sometimes! does it have to do with the network type?
 

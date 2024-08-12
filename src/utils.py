@@ -7,11 +7,13 @@ from itertools import islice, zip_longest
 from pathlib import Path
 
 
-def load_data(data_dir, layer_types: list = ["neighbor", "colleague"]):
+def load_data(data_dir, year, layer_types: list = ["neighbor", "colleague"]):
     """Load layered network data
     
     Args:
-        layer (list): layers of data to load. Must be a subset of ["family", "colleague", "education", "neighbor", "household"]
+        data_dir (str): path to the directory with the layers
+        year (int): year of the data to use
+        layer (list): layers of data to load. Must be a subset of ["family", "colleague", "classmate", "neighbor", "household"]
 
     Returns:
         tuple: (
@@ -21,11 +23,11 @@ def load_data(data_dir, layer_types: list = ["neighbor", "colleague"]):
             )
     
     """
-    possible_layers = ["family", "colleague", "education", "neighbor", "household"]
+    possible_layers = ["family", "colleague", "classmate", "neighbor", "household"]
     assert all([layer in possible_layers for layer in layer_types])
     layers = []
     for ltype in layer_types:
-        with Path(data_dir + ltype + "_adjacency_dict.pkl").open("rb") as pkl_file:
+        with Path(data_dir + ltype + "_" + str(year) + "_adjacency_dict.pkl").open("rb") as pkl_file:
             edges = dict(_pickle.load(pkl_file))
             # edges_keep = dict((u, edges[u]) for u in users)
             layers.append(edges)

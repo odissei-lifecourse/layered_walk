@@ -18,7 +18,7 @@ def custom_sample(choice_set: list):
 
 @numba.njit(nogil=True)
 def create_walks(
-    nodes: numba.typed.List,
+    nodes: numba.int64[:],
     walk_len: int,
     node_layer_dict: numba.typed.Dict,
     layers: numba.typed.List,

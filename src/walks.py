@@ -44,7 +44,7 @@ def single_walk(start_node: int,
     for draw in np.random.rand(walk_len):
         layer_indices = node_layer_dict[current_node]
 
-        if draw > p:
+        if draw > p or layer_index not in layer_indices: # because graph is not directed, a node may be reachable on one layer but does not have any outgoing connections on that layer
             layer_index = custom_sample(layer_indices)
             if layer_index == -1:
                 break

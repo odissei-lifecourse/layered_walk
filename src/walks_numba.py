@@ -70,7 +70,7 @@ def single_walk(start_node: types.int64,
     for draw in np.random.rand(walk_len):
         layer_indices = node_layer_dict[current_node]
 
-        if draw > p:
+        if draw > p or layer_index not in layer_indices:
             layer_index = custom_sample(layer_indices)
             if layer_index == -1:
                 break

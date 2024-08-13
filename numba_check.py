@@ -25,16 +25,6 @@ from src.async_timing import timer as async_timer
 from config import data_dir, config_dict 
 
 
-# from src.walks import create_walks as create_walks_python
-# from src.walks import single_walk as single_walk_python
-
-# from src.walks_numba import single_walk as single_walk_numba
-# from src.walks_numba import create_walks as create_walks_numba
-
-
-
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -77,11 +67,9 @@ async def main():
 
     print("loading data")
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
-    users, layers, node_layer_dict = load_data(DATA_DIR, YEAR, connected_node_file, LAYERS)
-
-
-    rng = np.random.default_rng(seed=95359385252)
-    users = list(rng.choice(users, size=SAMPLE_SIZE))
+    users, layers, node_layer_dict = load_data(
+        DATA_DIR, YEAR, connected_node_file, LAYERS, SAMPLE_SIZE
+    )
 
     # In order to use numba, we need to store the data in numba-compatible objects
     print("converting to numba")

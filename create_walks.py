@@ -54,11 +54,10 @@ async def main():
     LAYERS = LAYERS if not DRY_RUN else LAYERS_DRY_RUN
 
     print("loading data")
-    users, layers, node_layer_dict = load_data(DATA_DIR, YEAR, "connected_user_set", LAYERS)
-    if DRY_RUN:
-        rng = np.random.default_rng(seed=95359385252)
-        users = list(rng.choice(users, size=SAMPLE_SIZE_DRY_RUN))    
-    
+    users, layers, node_layer_dict = load_data(
+        DATA_DIR, YEAR, "connected_user_set", LAYERS, SAMPLE_SIZE_DRY_RUN if DRY_RUN else -1
+    )
+
     print("converting to numba")
     users_numba, layers_numba, node_layer_dict_numba = convert_to_numba(users, layers, node_layer_dict)
     

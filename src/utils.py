@@ -10,7 +10,12 @@ import warnings
 import os 
 
 
-def load_data(data_dir, year, connected_node_file = None, layer_types: list = ["neighbor", "colleague"]):
+def load_data(data_dir, 
+              year, 
+              connected_node_file = None, 
+              layer_types: list = ["neighbor", "colleague"],
+              sample_size: int = -1
+              ):
     """Load layered network data
     
     Args:
@@ -22,6 +27,7 @@ def load_data(data_dir, year, connected_node_file = None, layer_types: list = ["
             This should only be used on fake data.
         layer (list, optional): layers of data to load. Must be a subset of 
             ["family", "colleague", "classmate", "neighbor", "household"]
+        sample_size (int, optional): If non-negative, returns a random sample of this size of connected nodes.
 
     Returns:
         tuple: (
@@ -56,7 +62,6 @@ def load_data(data_dir, year, connected_node_file = None, layer_types: list = ["
 
             layers.append(edges)
 
-
     node_layer_dict = {}
     for user in unique_users:
         node_layer_dict[user] = []
@@ -65,6 +70,11 @@ def load_data(data_dir, year, connected_node_file = None, layer_types: list = ["
             if user in layer:
                 if len(layer[user]) > 0:
                     node_layer_dict[user].append(i)
+
+
+    if sample_size > 0:
+        rng = np.random.default_rng(seed=95359385252)
+        unique_users = list(rng.choice(unique_users, size=sample_size))
 
     return unique_users, layers, node_layer_dict
 

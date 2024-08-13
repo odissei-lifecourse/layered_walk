@@ -1,5 +1,5 @@
 
-import _pickle 
+import pickle 
 from numba.typed import Dict, List
 from numba.core import types
 import numpy as np
@@ -38,7 +38,7 @@ def load_data(data_dir, year, connected_node_file = None, layer_types: list = ["
 
     if connected_node_file:
         with Path(data_dir + connected_node_file + "_" + str(year) + ".pkl").open("rb") as pkl_file:
-            unique_users = list(_pickle.load(pkl_file))
+            unique_users = list(pickle.load(pkl_file))
     else:
         warnings.warn("connected_node_file not provided; using edges from family network. Do this only with fake data.")
         layer_types = list(set(layer_types + ["family"]))
@@ -47,7 +47,7 @@ def load_data(data_dir, year, connected_node_file = None, layer_types: list = ["
     layers = []
     for ltype in layer_types:
         with Path(data_dir + ltype + "_" + str(year) + "_adjacency_dict.pkl").open("rb") as pkl_file:
-            edges = dict(_pickle.load(pkl_file))
+            edges = dict(pickle.load(pkl_file))
 
             if not connected_node_file and ltype == "family":
                 unique_users = list(edges.keys())

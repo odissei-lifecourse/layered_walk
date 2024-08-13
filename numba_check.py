@@ -46,6 +46,8 @@ def parse_args():
         action=argparse.BooleanOptionalAction
         )  
     parser.add_argument("--location", help="Snellius or local machine", choices=["snellius", "local"])
+    parser.add_argument("--year", help="Which year of the network data to use", type=int, default=2010)
+
     return parser.parse_args()
 
 
@@ -64,7 +66,8 @@ config_dict = {
 
 data_dir = {
     "snellius": "/projects/0/prjs1019/data/graph/processed/",
-    "local": "/home/flavio/datasets/synthetic_layered_graph_1mil/"
+    "local": "/home/flavio/datasets/synthetic_layered_graph_1mil/",
+    "ossc": "/gpfs/ostor/ossc9424/homedir/Dakota_network/intermediates/"
 }
 
 
@@ -74,17 +77,26 @@ async def main():
 
     args = parse_args()
     DRY_RUN = args.dry_run
-    DATA_DIR = data_dir[args.location]
-    config = config_dict["big"]
+    LOCATION = args.location
+    DATA_DIR = data_dir[LOCATION]
+    YEAR = args.yearg
+
+    suffix = "_ossc" if LOCATION == "ossc" else ""
+    key = f"big{suffix}"
+
     if DRY_RUN:
-        config = config_dict["small"]
+        key = f"small{suffix}"
+    
+    config = config_dict[key]
 
     SAMPLE_SIZE = config["sample_size"]
     WALK_LEN = config["walk_len"]
     LAYERS = config["layers"]
 
     print("loading data")
-    users, layers, node_layer_dict = load_data(DATA_DIR, LAYERS)
+    users, layers, node_layer_dict = load_data(DATA_DIR, YEAR, "connected_user_set", LAYERS)
+
+
     rng = np.random.default_rng(seed=95359385252)
     users = list(rng.choice(users, size=SAMPLE_SIZE))
 
@@ -143,6 +155,7 @@ async def main():
         return result 
     
     workers = [2**i for i in range(int(log2(N_WORKERS))+1)]
+    workers = workers[-3:]
     if DRY_RUN:
         workers = [N_WORKERS]
     

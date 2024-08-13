@@ -55,7 +55,7 @@ config_dict = {
     "big": {
         "layers":  ["classmate", "household", "family", "colleague", "neighbor"],
         "walk_len": 50,
-        "sample_size": 900_000
+        "sample_size": 200_000
     },
     "small": {
         "layers": ["neighbor", "colleague"],
@@ -79,7 +79,7 @@ async def main():
     DRY_RUN = args.dry_run
     LOCATION = args.location
     DATA_DIR = data_dir[LOCATION]
-    YEAR = args.yearg
+    YEAR = args.year
 
     suffix = "_ossc" if LOCATION == "ossc" else ""
     key = f"big{suffix}"
@@ -94,7 +94,8 @@ async def main():
     LAYERS = config["layers"]
 
     print("loading data")
-    users, layers, node_layer_dict = load_data(DATA_DIR, YEAR, "connected_user_set", LAYERS)
+    connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
+    users, layers, node_layer_dict = load_data(DATA_DIR, YEAR, connected_node_file, LAYERS)
 
 
     rng = np.random.default_rng(seed=95359385252)
@@ -132,16 +133,16 @@ async def main():
     print("timing multiple runs")
     def wrapper():
         return create_walks_python(users, WALK_LEN, node_layer_dict, layers)
-    #t_mult_python = timeit.timeit(wrapper, number=N_RUNS)
+    t_mult_python = timeit.timeit(wrapper, number=N_RUNS)
 
     _ = create_walks_numba(users_numba[:5], 5, node_layer_dict_numba, layers_numba)
     def wrapper():
         return create_walks_numba(users_numba, WALK_LEN, node_layer_dict_numba, layers_numba)
     t_mult_numba = timeit.timeit(wrapper, number=N_RUNS)
     
-    print(f"multiple runs, absolute for numba: {t_mult_numba}")
-    #print(f"multiple runs, absolute: {t_mult_python} for python, {t_mult_numba} for numba")
-    #print(f"multiple runs numba/python: {t_mult_numba/t_mult_python}")
+    #print(f"multiple runs, absolute for numba: {t_mult_numba}")
+    print(f"multiple runs, absolute: {t_mult_python} for python, {t_mult_numba} for numba")
+    print(f"multiple runs numba/python: {t_mult_numba/t_mult_python}")
 
 
     print("timing parallel runs")
@@ -174,8 +175,13 @@ async def main():
 
 
     n_walks = sum(len(x) for x in result)
-    walk_lengths = [len(x) for x in result[0]]
-    avg_lengths = sum(walk_lengths) / len(walk_lengths) # TODO: it seems to fail sometimes! does it have to do with the network type?
+    data = []
+    for walks in result:
+        walk_lengths = [len(x) for x in walks]
+        avg_lengths = sum(walk_lengths) / len(walk_lengths) # TODO: it seems to fail sometimes! does it have to do with the network type?
+        data.append(avg_lengths)
+
+    avg_lengths = sum(data) / len(data)
 
     print(f"we created {n_walks} walks with average length of {avg_lengths}")
 

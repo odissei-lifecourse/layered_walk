@@ -5,16 +5,19 @@ from numba.core import types
 import numpy as np
 from itertools import islice
 from pathlib import Path
+import warnings
 
 
-def load_data(data_dir, year, connected_node_file: str = "connected_user_set", layer_types: list = ["neighbor", "colleague"]):
+def load_data(data_dir, year, connected_node_file = None, layer_types: list = ["neighbor", "colleague"]):
     """Load layered network data
     
     Args:
         data_dir (str): path to the directory with the layers
         year (int): year of the data to use
-        connected_node_file (str, optional): name of the file with nodes in the biggest connected component. 
+        connected_node_file (str): name of the file with nodes in the biggest connected component. 
             Needs to be stored as "`data_dir`/`connected_node_file`_`year`.pkl".
+            If not supported, it will take the nodes from the family network as the connected set. 
+            This should only be used on fake data.
         layer (list, optional): layers of data to load. Must be a subset of 
             ["family", "colleague", "classmate", "neighbor", "household"]
 
@@ -25,19 +28,31 @@ def load_data(data_dir, year, connected_node_file: str = "connected_user_set", l
             dictionary of users indicating on which layers they have at least one connection
             )
     
+    Raises:
+        UserWarning when `connected_node_file` is not provided.
+    
     """
+
     possible_layers = ["family", "colleague", "classmate", "neighbor", "household"]
     assert all([layer in possible_layers for layer in layer_types])
+
+    if connected_node_file:
+        with Path(data_dir + connected_node_file + "_" + str(year) + ".pkl").open("rb") as pkl_file:
+            unique_users = list(_pickle.load(pkl_file))
+    else:
+        warnings.warn("connected_node_file not provided; using edges from family network. Do this only with fake data.")
+        layer_types = list(set(layer_types + ["family"]))
+
+
     layers = []
     for ltype in layer_types:
         with Path(data_dir + ltype + "_" + str(year) + "_adjacency_dict.pkl").open("rb") as pkl_file:
             edges = dict(_pickle.load(pkl_file))
-            # edges_keep = dict((u, edges[u]) for u in users)
-            layers.append(edges)
 
-    
-    with Path(data_dir + connected_node_file + "_" + str(year) + ".pkl").open("rb") as pkl_file:
-        unique_users = list(_pickle.load(pkl_file))
+            if not connected_node_file and ltype == "family":
+                unique_users = list(edges.keys())
+
+            layers.append(edges)
 
 
     node_layer_dict = {}

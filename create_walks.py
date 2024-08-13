@@ -53,9 +53,10 @@ async def main():
 
     LAYERS = LAYERS if not DRY_RUN else LAYERS_DRY_RUN
 
-    print("loading data")
+    print("loading data")    
+    connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
     users, layers, node_layer_dict = load_data(
-        DATA_DIR, YEAR, "connected_user_set", LAYERS, SAMPLE_SIZE_DRY_RUN if DRY_RUN else -1
+        DATA_DIR["input"], YEAR, connected_node_file, LAYERS, SAMPLE_SIZE_DRY_RUN
     )
 
     print("converting to numba")
@@ -73,9 +74,11 @@ async def main():
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
     
+    print("Creating walks")
     result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
 
-    filename = DATA_DIR + DEST + "_" + str(YEAR)
+    print("Saving")
+    filename = DATA_DIR["output"] + DEST + "_" + str(YEAR)
     if DRY_RUN:
         filename += "_dry"
 

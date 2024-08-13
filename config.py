@@ -15,7 +15,16 @@ config_dict = {
 }
 
 data_dir = {
-    "snellius": "/projects/0/prjs1019/data/graph/processed/",
-    "local": "/home/flavio/datasets/synthetic_layered_graph_1mil/",
-    "ossc": "/gpfs/ostor/ossc9424/homedir/Dakota_network/intermediates/"
+    "snellius": {
+        "input": "/projects/0/prjs1019/data/graph/processed/",
+        "output": "/projects/0/prjs1019/data/graph/walks/"
+    } ,
+    "local": {
+        "input": "/home/flavio/datasets/synthetic_layered_graph_1mil/",
+        "output": "/home/flavio/datasets/synthetic_layered_graph_1mil/output"
+    },
+    "ossc": {
+        "input": "/gpfs/ostor/ossc9424/homedir/Dakota_network/intermediates/",
+        "output": "/gpfs/ostor/ossc9424/homedir/Dakota_network/random_walks/",
+    }
 }

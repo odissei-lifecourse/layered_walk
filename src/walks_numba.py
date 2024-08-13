@@ -24,6 +24,7 @@ def create_walks(
     layers: numba.typed.List,
     p: float=0.8
     ):
+    # result = List.empty_list(types.int64)
     result = []
     for node in nodes:
         res = single_walk(

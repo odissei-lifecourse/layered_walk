@@ -3,7 +3,6 @@ import timeit
 import asyncio
 import argparse
 import numpy as np
-import os 
 from math import log2
 
 from src.utils import (
@@ -68,7 +67,7 @@ async def main():
     print("loading data")
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
     users, layers, node_layer_dict = load_data(
-        DATA_DIR, YEAR, connected_node_file, LAYERS, SAMPLE_SIZE
+        DATA_DIR["input"], YEAR, connected_node_file, LAYERS, SAMPLE_SIZE
     )
 
     # In order to use numba, we need to store the data in numba-compatible objects
@@ -93,7 +92,7 @@ async def main():
     print(f"single run numba/python: {t_single_numba/t_single_python}")
 
     # ## Walks for multiple nodes
-    print("timing multiple runs")
+    print(f"timing multiple runs, sample size={SAMPLE_SIZE}")
     def wrapper():
         return create_walks_python(users, WALK_LEN, node_layer_dict, layers)
     t_mult_python = timeit.timeit(wrapper, number=N_RUNS)

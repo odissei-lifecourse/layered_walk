@@ -30,14 +30,15 @@ def parse_args():
     parser.add_argument("--dest", help="Destination of csv file, relative to data_dir. year will be appended to the end.", type=str)
     parser.add_argument("--n_walks", help="Number of walks per node", type=int, default=5)
     parser.add_argument("--walk_len", help="Length of walks to generate", type=int, default=50)
-    parser.add_argument("--year", help="Which year of the network data to user", type=int, default=2010)
+    parser.add_argument("--year", help="Which year of the network data to use", type=int, default=2010)
     return parser.parse_args()
 
 
 
 data_dir = {
     "snellius": "/projects/0/prjs1019/data/graph/processed/",
-    "local": "/home/flavio/datasets/synthetic_layered_graph_1mil/"
+    "local": "/home/flavio/datasets/synthetic_layered_graph_1mil/",
+    "ossc": "/gpfs/ostor/ossc9424/homedir/Dakota_network/intermediates/"
 }
 
 
@@ -55,7 +56,7 @@ async def main():
     LAYERS = LAYERS if not DRY_RUN else LAYERS_DRY_RUN
 
     print("loading data")
-    users, layers, node_layer_dict = load_data(DATA_DIR, YEAR, LAYERS)
+    users, layers, node_layer_dict = load_data(DATA_DIR, YEAR, "connected_user_set", LAYERS)
     if DRY_RUN:
         rng = np.random.default_rng(seed=95359385252)
         users = list(rng.choice(users, size=SAMPLE_SIZE_DRY_RUN))    

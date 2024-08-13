@@ -41,8 +41,7 @@ def single_walk(start_node: int,
     if layer_index == -1:
         return walk
 
-    for draw in np.random.rand(walk_len, 1):
-        draw = draw[0]
+    for draw in np.random.rand(walk_len):
         layer_indices = node_layer_dict[current_node]
 
         if draw > p:

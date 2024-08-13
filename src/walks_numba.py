@@ -68,9 +68,8 @@ def single_walk(start_node: types.int32,
         return walk
 
     # walk.append(start_node)
-    for draw in np.random.rand(walk_len, 1):
+    for draw in np.random.rand(walk_len):
     # while len(walk) < walk_len:
-        draw = draw[0]
         layer_indices = node_layer_dict[current_node]
         # roll = random_nums.pop()
 

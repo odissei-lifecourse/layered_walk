@@ -13,7 +13,7 @@ def custom_sample(choice_set: list):
     else:
         chosen = np.random.choice(choice_set)
     
-    return np.int32(chosen)
+    return np.int64(chosen)
 
 
 def single_walk(start_node: int,

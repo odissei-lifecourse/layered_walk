@@ -1,7 +1,6 @@
 import numba 
 import numpy as np
-
-
+from numba.typed import List
 from numba.core import types
 
 
@@ -15,7 +14,7 @@ def custom_sample(choice_set: list):
     else:
         chosen = np.random.choice(choice_set)
     
-    return np.int32(chosen)
+    return np.int64(chosen)
 
 @numba.njit(nogil=True)
 def create_walks(
@@ -40,7 +39,7 @@ def create_walks(
 
 
 @numba.njit(nogil=True)
-def single_walk(start_node: types.int32,
+def single_walk(start_node: types.int64,
                 walk_len: int, 
                 node_layer_dict: numba.typed.Dict, 
                 layers: numba.typed.List,
@@ -58,20 +57,18 @@ def single_walk(start_node: types.int32,
         list: a sequence of node identifiers
     """
     current_node = start_node
-    # walk = List.empty_list(types.int32)
-    # walk.append(start_node)
-    walk = [start_node]
+
+    walk = List.empty_list(types.int64)
+    walk.append(start_node)
+
 
     layer_indices = node_layer_dict[current_node]
     layer_index = custom_sample(layer_indices)
     if layer_index == -1:
         return walk
 
-    # walk.append(start_node)
     for draw in np.random.rand(walk_len):
-    # while len(walk) < walk_len:
         layer_indices = node_layer_dict[current_node]
-        # roll = random_nums.pop()
 
         if draw > p:
             layer_index = custom_sample(layer_indices)

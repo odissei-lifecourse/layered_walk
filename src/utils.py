@@ -2,6 +2,7 @@
 import pickle 
 from numba.typed import Dict, List
 from numba.core import types
+import numba
 import numpy as np
 from itertools import islice
 from pathlib import Path
@@ -81,28 +82,26 @@ def convert_to_numba(users: list, layers: list, node_layer_dict: dict):
     
     """
 
-    users_numba = List()
-    for user in users:
-        user_numba = types.int32(user)
-        users_numba.append(user_numba)
+    users_numba = List(users)
+    users_numba = numba.int64(users_numba)
 
     node_layer_dict_numba = Dict.empty(
-        key_type=types.int32,
-        value_type=types.int32[:]
+        key_type=types.int64,
+        value_type=types.int64[:]
     )   
     for k, v in node_layer_dict.items():
-        k = types.int32(k)
-        node_layer_dict_numba[k] = np.asarray(v, dtype=np.int32)
+        k = types.int64(k)
+        node_layer_dict_numba[k] = np.asarray(v, dtype=np.int64)
 
     layers_numba = List()
     for layer in layers: 
         layer_numba = Dict.empty(
-            key_type=types.int32,
-            value_type=types.int32[:]
+            key_type=types.int64,
+            value_type=types.int64[:]
         )
         for k, v in layer.items():
-            k = types.int32(k)
-            layer_numba[k] = np.asarray(v, dtype=np.int32)
+            k = types.int64(k)
+            layer_numba[k] = np.asarray(v, dtype=np.int64)
     
         layers_numba.append(layer_numba)
 

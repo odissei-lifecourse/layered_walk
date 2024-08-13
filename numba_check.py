@@ -122,9 +122,9 @@ async def main():
     t_single_python = timeit.timeit(wrapper, number=N_RUNS)
 
     # ### Numba 
-    _ = single_walk_numba(10, 5, node_layer_dict_numba, layers_numba) # compile
+    _ = single_walk_numba(users_numba[0], 5, node_layer_dict_numba, layers_numba) # compile
     def wrapper():
-        return single_walk_numba(10, WALK_LEN, node_layer_dict_numba, layers_numba)
+        return single_walk_numba(users_numba[0], WALK_LEN, node_layer_dict_numba, layers_numba)
     t_single_numba = timeit.timeit(wrapper, number=N_RUNS)
 
     print(f"single run numba/python: {t_single_numba/t_single_python}")
@@ -156,7 +156,7 @@ async def main():
         return result 
     
     workers = [2**i for i in range(int(log2(N_WORKERS))+1)]
-    workers = workers[-3:]
+    workers = [workers[0]] + workers[-2:]
     if DRY_RUN:
         workers = [N_WORKERS]
     

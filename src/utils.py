@@ -3,17 +3,20 @@ import _pickle
 from numba.typed import Dict, List
 from numba.core import types
 import numpy as np
-from itertools import islice, zip_longest
+from itertools import islice
 from pathlib import Path
 
 
-def load_data(data_dir, year, layer_types: list = ["neighbor", "colleague"]):
+def load_data(data_dir, year, connected_node_file: str = "connected_user_set", layer_types: list = ["neighbor", "colleague"]):
     """Load layered network data
     
     Args:
         data_dir (str): path to the directory with the layers
         year (int): year of the data to use
-        layer (list): layers of data to load. Must be a subset of ["family", "colleague", "classmate", "neighbor", "household"]
+        connected_node_file (str, optional): name of the file with nodes in the biggest connected component. 
+            Needs to be stored as "`data_dir`/`connected_node_file`_`year`.pkl".
+        layer (list, optional): layers of data to load. Must be a subset of 
+            ["family", "colleague", "classmate", "neighbor", "household"]
 
     Returns:
         tuple: (
@@ -32,11 +35,13 @@ def load_data(data_dir, year, layer_types: list = ["neighbor", "colleague"]):
             # edges_keep = dict((u, edges[u]) for u in users)
             layers.append(edges)
 
-    users = list(layers[0].keys())
+    
+    with Path(data_dir + connected_node_file + "_" + str(year) + ".pkl").open("rb") as pkl_file:
+        unique_users = list(_pickle.load(pkl_file))
 
 
     node_layer_dict = {}
-    for user in users:
+    for user in unique_users:
         node_layer_dict[user] = []
         
         for i, layer in enumerate(layers):
@@ -44,11 +49,11 @@ def load_data(data_dir, year, layer_types: list = ["neighbor", "colleague"]):
                 if len(layer[user]) > 0:
                     node_layer_dict[user].append(i)
 
-    return users, layers, node_layer_dict
+    return unique_users, layers, node_layer_dict
 
 
 
-def convert_to_numba(users: list, layers: list, node_layer_dict: dict, ):
+def convert_to_numba(users: list, layers: list, node_layer_dict: dict):
     """Convert python data structures to numba-compatible ones.
     
     Args:

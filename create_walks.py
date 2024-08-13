@@ -83,8 +83,10 @@ async def main():
         filename += "_dry"
 
     with Path(filename + ".csv").open("w") as csv_file:
+        sample_walk = result[0][0]
+        sample_walk_len = len(sample_walk)
         writer = csv.writer(csv_file, delimiter=",")
-        header_row = ["SOURCE"] + ["STEP_" + str(i) for i in range(WALK_LEN-1)]
+        header_row = ["SOURCE"] + ["STEP_" + str(i) for i in range(sample_walk_len-1)]
         writer.writerow(header_row)
         for walks in result:
             writer.writerows(walks)

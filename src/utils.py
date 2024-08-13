@@ -7,6 +7,7 @@ import numpy as np
 from itertools import islice
 from pathlib import Path
 import warnings
+import os 
 
 
 def load_data(data_dir, year, connected_node_file = None, layer_types: list = ["neighbor", "colleague"]):
@@ -118,3 +119,17 @@ def batched(iterable, n):
         if not batch:
             return
         yield batch
+
+
+def get_n_cores(interactive: bool=False):
+    """Returns the number of cores to use. 
+
+    Args:
+        interactive (bool, optional): if true, returns *half* of the total cores available.     
+    """
+    cpus_avail = os.sched_getaffinity(0)
+    # print(f"Have the following CPU cores: {cpus_avail}") 
+    n_cores = len(cpus_avail)
+    if interactive:
+        n_cores = n_cores // 2
+    return n_cores

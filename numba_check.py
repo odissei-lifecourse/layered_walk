@@ -6,34 +6,32 @@ import numpy as np
 import os 
 from math import log2
 
-from src.utils import batched
-from dataclasses import dataclass
-from typing import Optional
-from time import perf_counter
-from contextlib import asynccontextmanager
+from src.utils import (
+    batched,
+    load_data,
+    convert_to_numba,
+    get_n_cores
+)
+from src.walks import (
+    create_walks as create_walks_python,
+    single_walk as single_walk_python
+)
+from src.walks_numba import (
+    create_walks as create_walks_numba,
+    single_walk as single_walk_numba
+)
+
+from src.async_timing import timer as async_timer
+from config import data_dir, config_dict 
 
 
-from src.utils import load_data, convert_to_numba
+# from src.walks import create_walks as create_walks_python
+# from src.walks import single_walk as single_walk_python
 
-from src.walks import create_walks as create_walks_python
-from src.walks import single_walk as single_walk_python
-
-from src.walks_numba import single_walk as single_walk_numba
-from src.walks_numba import create_walks as create_walks_numba
+# from src.walks_numba import single_walk as single_walk_numba
+# from src.walks_numba import create_walks as create_walks_numba
 
 
-# Source: https://esciencecenter-digital-skills.github.io/parallel-python-workbench/extra-asyncio.html
-@dataclass
-class Elapsed:
-    time: Optional[float] = None
-
-
-@asynccontextmanager
-async def timer():
-    e = Elapsed()
-    t = perf_counter()
-    yield e
-    e.time = perf_counter() - t
 
 
 
@@ -51,24 +49,6 @@ def parse_args():
     return parser.parse_args()
 
 
-config_dict = {
-    "big": {
-        "layers":  ["classmate", "household", "family", "colleague", "neighbor"],
-        "walk_len": 50,
-        "sample_size": 200_000
-    },
-    "small": {
-        "layers": ["neighbor", "colleague"],
-        "walk_len": 5,
-        "sample_size": 10_000
-    }
-}
-
-data_dir = {
-    "snellius": "/projects/0/prjs1019/data/graph/processed/",
-    "local": "/home/flavio/datasets/synthetic_layered_graph_1mil/",
-    "ossc": "/gpfs/ostor/ossc9424/homedir/Dakota_network/intermediates/"
-}
 
 
 async def main():
@@ -93,6 +73,8 @@ async def main():
     WALK_LEN = config["walk_len"]
     LAYERS = config["layers"]
 
+    N_WORKERS = get_n_cores(DRY_RUN)
+
     print("loading data")
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
     users, layers, node_layer_dict = load_data(DATA_DIR, YEAR, connected_node_file, LAYERS)
@@ -104,13 +86,6 @@ async def main():
     # In order to use numba, we need to store the data in numba-compatible objects
     print("converting to numba")
     users_numba, layers_numba, node_layer_dict_numba = convert_to_numba(users, layers, node_layer_dict)
-    
-
-    cpus_avail = os.sched_getaffinity(0)
-    print(f"Have the following CPU cores: {cpus_avail}") 
-    N_WORKERS = len(cpus_avail) # number of workers to parallelize over
-    if DRY_RUN:
-        N_WORKERS = N_WORKERS // 2
 
 
     # ## walks for a single node 
@@ -140,7 +115,6 @@ async def main():
         return create_walks_numba(users_numba, WALK_LEN, node_layer_dict_numba, layers_numba)
     t_mult_numba = timeit.timeit(wrapper, number=N_RUNS)
     
-    #print(f"multiple runs, absolute for numba: {t_mult_numba}")
     print(f"multiple runs, absolute: {t_mult_python} for python, {t_mult_numba} for numba")
     print(f"multiple runs numba/python: {t_mult_numba/t_mult_python}")
 
@@ -164,7 +138,7 @@ async def main():
     for n_workers in workers:
         data = []
         for _ in range(N_RUNS):
-            async with timer() as t:  # not sure this parallelizes. speed is very volatile 
+            async with async_timer() as t:  # not sure this parallelizes. speed is very volatile 
                 result = await create_walks_parallel(users_numba, n_workers)
            
             data.append(t.time)

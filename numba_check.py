@@ -146,8 +146,8 @@ async def main():
 
 
     print("timing parallel runs")
-    def walks_wrapper(users):
-        return create_walks_numba(users, WALK_LEN, node_layer_dict_numba, layers_numba, 0.8)
+    def walks_wrapper(nodes):
+        return create_walks_numba(nodes, WALK_LEN, node_layer_dict_numba, layers_numba, 0.8)
 
     _ = walks_wrapper(users[:10])
 

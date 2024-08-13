@@ -2,13 +2,18 @@
 import asyncio
 import argparse
 import numpy as np
-import os 
 from pathlib import Path
 import csv 
 
-from src.utils import batched
-from src.utils import load_data, convert_to_numba
+from src.utils import (
+    batched,
+    load_data,
+    convert_to_numba,
+    get_n_cores
+) 
 from src.walks_numba import create_walks as create_walks_numba
+
+from config import data_dir
 
 
 LAYERS = ["classmate", "household", "family", "colleague", "neighbor"]
@@ -35,13 +40,6 @@ def parse_args():
 
 
 
-data_dir = {
-    "snellius": "/projects/0/prjs1019/data/graph/processed/",
-    "local": "/home/flavio/datasets/synthetic_layered_graph_1mil/",
-    "ossc": "/gpfs/ostor/ossc9424/homedir/Dakota_network/intermediates/"
-}
-
-
 async def main():
 
     args = parse_args()
@@ -65,11 +63,7 @@ async def main():
     users_numba, layers_numba, node_layer_dict_numba = convert_to_numba(users, layers, node_layer_dict)
     
 
-    cpus_avail = os.sched_getaffinity(0)
-    print(f"Have the following CPU cores: {cpus_avail}") 
-    N_WORKERS = len(cpus_avail) # number of workers to parallelize over
-    if LOCATION == "local":
-        N_WORKERS = N_WORKERS // 2
+    N_WORKERS = get_n_cores(DRY_RUN)
 
     def walks_wrapper(users):
         return create_walks_numba(users, WALK_LEN, node_layer_dict_numba, layers_numba, 0.8)
@@ -80,7 +74,7 @@ async def main():
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
     
-    result = await create_walks_parallel(N_WALKS * users_numba, N_WORKERS) # TODO: cannot do int * numba.typed.List
+    result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
 
     filename = DATA_DIR + DEST + "_" + str(YEAR)
     if DRY_RUN:

@@ -81,13 +81,13 @@ async def main():
     print("timing single run")
     def wrapper():
         return single_walk_python(10, WALK_LEN, node_layer_dict, layers)
-    t_single_python = timeit.timeit(wrapper, number=N_RUNS)
+    t_single_python = timeit.timeit(wrapper, number=N_RUNS) / N_RUNS
 
     # ### Numba 
     _ = single_walk_numba(users_numba[0], 5, node_layer_dict_numba, layers_numba) # compile
     def wrapper():
         return single_walk_numba(users_numba[0], WALK_LEN, node_layer_dict_numba, layers_numba)
-    t_single_numba = timeit.timeit(wrapper, number=N_RUNS)
+    t_single_numba = timeit.timeit(wrapper, number=N_RUNS) / N_RUNS
 
     print(f"single run numba/python: {t_single_numba/t_single_python}")
 
@@ -95,12 +95,12 @@ async def main():
     print(f"timing multiple runs, sample size={SAMPLE_SIZE}")
     def wrapper():
         return create_walks_python(users, WALK_LEN, node_layer_dict, layers)
-    t_mult_python = timeit.timeit(wrapper, number=N_RUNS)
+    t_mult_python = timeit.timeit(wrapper, number=N_RUNS) / N_RUNS
 
     _ = create_walks_numba(users_numba[:5], 5, node_layer_dict_numba, layers_numba)
     def wrapper():
         return create_walks_numba(users_numba, WALK_LEN, node_layer_dict_numba, layers_numba)
-    t_mult_numba = timeit.timeit(wrapper, number=N_RUNS)
+    t_mult_numba = timeit.timeit(wrapper, number=N_RUNS) / N_RUNS
     
     print(f"multiple runs, absolute: {t_mult_python} for python, {t_mult_numba} for numba")
     print(f"multiple runs numba/python: {t_mult_numba/t_mult_python}")

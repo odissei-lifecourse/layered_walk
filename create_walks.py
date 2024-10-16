@@ -51,12 +51,17 @@ async def main():
     YEAR = args.year
     DEST = args.dest
 
-    LAYERS = LAYERS if not DRY_RUN else LAYERS_DRY_RUN
+    layers = LAYERS
+    if DRY_RUN:
+        layers = LAYERS_DRY_RUN
+    sample_size = -1
+    if DRY_RUN:
+        sample_size = SAMPLE_SIZE_DRY_RUN
 
     print("loading data")    
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
     users, layers, node_layer_dict = load_data(
-        DATA_DIR["input"], YEAR, connected_node_file, LAYERS, SAMPLE_SIZE_DRY_RUN
+        DATA_DIR["input"], YEAR, connected_node_file, layers, sample_size 
     )
 
     print("converting to numba")

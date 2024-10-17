@@ -6,3 +6,6 @@ Timing performance (1 random walk for 100k nodes) on fake data:
 - numba (sequential): 4.7s
 - numba multithreaded (64 cores): 0.8s
 
+On real data (NL population network):
+- For 15.2 Mio nodes, creating 5 walks per node of length 10 takes 1.5 hours and 160GB of memory. 
+

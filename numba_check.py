@@ -77,7 +77,6 @@ async def main():
     users_numba, layer_edge_dict_numba = convert_to_numba(users, layer_edge_dict)
 
     # ## walks for a single node 
-
     # ### Python
     print("timing single run")
     def wrapper():
@@ -109,7 +108,7 @@ async def main():
 
     print("timing parallel runs")
     def walks_wrapper(nodes):
-        return create_walks_numba(nodes, WALK_LEN, node_layer_dict_numba, layers_numba, 0.8)
+        return create_walks_numba(nodes, WALK_LEN, layer_edge_dict_numba, 0.8)
 
     _ = walks_wrapper(users[:10])
 

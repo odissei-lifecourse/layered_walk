@@ -5,7 +5,7 @@ from numba.core import types
 
 
 @numba.njit(nogil=True)
-def custom_sample(choice_set: list):
+def custom_sample(choice_set: List):
     "custom function to apply np.random.choice"
     if len(choice_set) == 0:
         return -1 
@@ -20,8 +20,7 @@ def custom_sample(choice_set: list):
 def create_walks(
     nodes: numba.int64[:],
     walk_len: int,
-    node_layer_dict: numba.typed.Dict,
-    layers: numba.typed.List,
+    layer_edge_dict: numba.typed.Dict,
     p: float=0.8
     ):
     result = List()
@@ -29,8 +28,7 @@ def create_walks(
         res = single_walk(
             node, 
             walk_len,
-            node_layer_dict,
-            layers,
+            layer_edge_dict,
             p
         )
         result.append(res)
@@ -60,14 +58,16 @@ def single_walk(start_node: types.int64,
     walk = List.empty_list(types.int64)
     walk.append(start_node)
 
-
-    layer_indices = List(node_layer_dict[current_node].keys())
+    
+    #layer_indices = List(layer_edge_dict[current_node].keys())
+    layer_indices = np.array(list(layer_edge_dict[current_node].keys()))
     layer_index = custom_sample(layer_indices)
     if layer_index == -1:
         return walk
 
     for draw in np.random.rand(walk_len):
-        layer_indices = List(layer_edge_dict[current_node].keys())
+       # layer_indices = List(layer_edge_dict[current_node].keys())
+        layer_indices = np.array(list(layer_edge_dict[current_node].keys()))
        # layer_indices = node_layer_dict[current_node]
 
         if draw > p or layer_index not in layer_indices:

@@ -12,6 +12,7 @@ from src.utils import (
     get_n_cores
 ) 
 from src.walks_numba import create_walks as create_walks_numba
+from src.walks import create_walks as create_walks_python
 
 from config import data_dir
 
@@ -67,18 +68,21 @@ async def main():
     print("converting to numba")
     users_numba, layer_edge_dict_numba = convert_to_numba(users, layer_edge_dict)
     
-    breakpoint()
 
     N_WORKERS = get_n_cores(DRY_RUN)
 
     def walks_wrapper(users):
-        return create_walks_numba(users, WALK_LEN, node_layer_dict_numba, layers_numba, 0.8)
+        return create_walks_numba(users, WALK_LEN, layer_edge_dict_numba, 0.8)
 
     _ = walks_wrapper(users[:10])
 
     async def create_walks_parallel(users, n_workers):
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
+
+    print("Creating walks with python")
+    breakpoint()
+    walks = create_walks_python(users, WALK_LEN, layer_edge_dict)
     
     print("Creating walks")
     result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)

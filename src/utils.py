@@ -73,9 +73,7 @@ def load_data(data_dir,
         dict_current_user = {}
         for idx, layer in enumerate(layers):
             layer_id = max_user_id + offset + idx
-            if user not in layer:
-                dict_current_user[layer_id] = []
-            else:
+            if user in layer:
                 dict_current_user[layer_id] = layer[user]
         layer_edge_dict[user] = dict_current_user
 

@@ -18,16 +18,15 @@ def custom_sample(choice_set: list):
 
 def single_walk(start_node: int,
                 walk_len: int, 
-                node_layer_dict: dict, 
-                layers: list,
+                layer_edge_dict: dict,
                 p: float=0.8):
     """Create a single random walk starting at one node.
     
     Args:
         start_node: the node from which to start
         walk_len: the length of the random walk 
-        node_layer_dict: dictionary indicating the layer indices in which each node as at least one edge.
-        layers: list of dicts. Each layer is an edge list, indicating the connected nodes for each node. 
+        layer_edge_dict: dictionary where keys are node identifiers and values are layer-specific
+        edge list, stored in a dict with {layer id: [connected nodes]}.
         p: probability of resampling the layer. 
     
     Returns:
@@ -36,23 +35,27 @@ def single_walk(start_node: int,
     current_node = start_node
     walk = [start_node]
 
-    layer_indices = node_layer_dict[current_node]
+
+    layer_indices = list(layer_edge_dict[current_node].keys())
+
     layer_index = custom_sample(layer_indices)
     if layer_index == -1:
-        return walk
+        return walk # TODO: raise ValueError here? we want all walks to be of the same length?
 
     for draw in np.random.rand(walk_len):
-        layer_indices = node_layer_dict[current_node]
+        layer_indices = list(layer_edge_dict[current_node].keys())
+        #layer_indices = node_layer_dict[current_node]
 
         if draw > p or layer_index not in layer_indices: # because graph is not directed, a node may be reachable on one layer but does not have any outgoing connections on that layer
             layer_index = custom_sample(layer_indices)
             if layer_index == -1:
                 break
 
-        current_layer = layers[layer_index]
-        adjacent_nodes = current_layer[current_node]
+        adjacent_nodes = layer_edge_dict[current_node][layer_index]
+        #current_layer = layers[layer_index]
+        #adjacent_nodes = current_layer[current_node]
 
-        walk.append(-layer_index - 1) # the first node is indicated by 0
+        walk.append(layer_index)
         next_node = custom_sample(adjacent_nodes)
         if next_node == -1:
             break
@@ -65,8 +68,9 @@ def single_walk(start_node: int,
 
 def create_walks(users: list, 
                  walk_len: int,
-                 node_layer_dict: dict,
-                 layers: list,
+                 layer_edge_dict: dict,
+                 #node_layer_dict: dict,
+                 #layers: list,
                  p: float=0.8
                  ):
     """Create 1 random walk for each node"""
@@ -74,10 +78,10 @@ def create_walks(users: list,
     for user in users:
         walk = single_walk(start_node=user,
                            walk_len=walk_len,
-                           node_layer_dict=node_layer_dict,
-                           layers=layers,
+                           layer_edge_dict=layer_edge_dict,
                            p=p)
         walks.append(walk)
+        # TODO: add walks starting from the node identifiers
     return walks
 
 

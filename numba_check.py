@@ -64,29 +64,30 @@ async def main():
 
     N_WORKERS = get_n_cores(DRY_RUN)
 
+
     print("loading data")
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
-    users, layers, node_layer_dict = load_data(
+    users, layer_edge_dict = load_data(
         DATA_DIR["input"], YEAR, connected_node_file, LAYERS, SAMPLE_SIZE
     )
 
+
     # In order to use numba, we need to store the data in numba-compatible objects
     print("converting to numba")
-    users_numba, layers_numba, node_layer_dict_numba = convert_to_numba(users, layers, node_layer_dict)
-
+    users_numba, layer_edge_dict_numba = convert_to_numba(users, layer_edge_dict)
 
     # ## walks for a single node 
 
     # ### Python
     print("timing single run")
     def wrapper():
-        return single_walk_python(10, WALK_LEN, node_layer_dict, layers)
+        return single_walk_python(10, WALK_LEN, layer_edge_dict)
     t_single_python = timeit.timeit(wrapper, number=N_RUNS) / N_RUNS
 
     # ### Numba 
-    _ = single_walk_numba(users_numba[0], 5, node_layer_dict_numba, layers_numba) # compile
+    _ = single_walk_numba(users_numba[0], 5, layer_edge_dict_numba) # compile
     def wrapper():
-        return single_walk_numba(users_numba[0], WALK_LEN, node_layer_dict_numba, layers_numba)
+        return single_walk_numba(users_numba[0], WALK_LEN, layer_edge_dict_numba)
     t_single_numba = timeit.timeit(wrapper, number=N_RUNS) / N_RUNS
 
     print(f"single run numba/python: {t_single_numba/t_single_python}")
@@ -94,12 +95,12 @@ async def main():
     # ## Walks for multiple nodes
     print(f"timing multiple runs, sample size={SAMPLE_SIZE}")
     def wrapper():
-        return create_walks_python(users, WALK_LEN, node_layer_dict, layers)
+        return create_walks_python(users, WALK_LEN, layer_edge_dict)
     t_mult_python = timeit.timeit(wrapper, number=N_RUNS) / N_RUNS
 
-    _ = create_walks_numba(users_numba[:5], 5, node_layer_dict_numba, layers_numba)
+    _ = create_walks_numba(users_numba[:5], 5, layer_edge_dict_numba)
     def wrapper():
-        return create_walks_numba(users_numba, WALK_LEN, node_layer_dict_numba, layers_numba)
+        return create_walks_numba(users_numba, WALK_LEN, layer_edge_dict_numba)
     t_mult_numba = timeit.timeit(wrapper, number=N_RUNS) / N_RUNS
     
     print(f"multiple runs, absolute: {t_mult_python} for python, {t_mult_numba} for numba")

@@ -41,8 +41,7 @@ def create_walks(
 @numba.njit(nogil=True)
 def single_walk(start_node: types.int64,
                 walk_len: int, 
-                node_layer_dict: numba.typed.Dict, 
-                layers: numba.typed.List,
+                layer_edge_dict: numba.typed.Dict,
                 p: float=0.8):
     """Create a single random walk starting at one node.
     
@@ -62,23 +61,25 @@ def single_walk(start_node: types.int64,
     walk.append(start_node)
 
 
-    layer_indices = node_layer_dict[current_node]
+    layer_indices = List(node_layer_dict[current_node].keys())
     layer_index = custom_sample(layer_indices)
     if layer_index == -1:
         return walk
 
     for draw in np.random.rand(walk_len):
-        layer_indices = node_layer_dict[current_node]
+        layer_indices = List(layer_edge_dict[current_node].keys())
+       # layer_indices = node_layer_dict[current_node]
 
         if draw > p or layer_index not in layer_indices:
             layer_index = custom_sample(layer_indices)
             if layer_index == -1:
                 break
 
-        current_layer = layers[layer_index]
-        adjacent_nodes = current_layer[current_node]
+        #current_layer = layers[layer_index]
+        adjacent_nodes = layer_edge_dict[current_node][layer_index]
+        #adjacent_nodes = current_layer[current_node]
 
-        walk.append(-layer_index - 1) # the first node is indicated by 0
+        walk.append(layer_index) # the first node is indicated by 0
         next_node = custom_sample(adjacent_nodes)
         if next_node == -1:
             break

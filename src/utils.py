@@ -10,6 +10,9 @@ import warnings
 import os 
 
 
+
+
+
 def load_data(data_dir, 
               year, 
               connected_node_file = None, 
@@ -41,8 +44,8 @@ def load_data(data_dir,
     
     """
 
-    possible_layers = ["family", "colleague", "classmate", "neighbor", "household"]
-    assert all([layer in possible_layers for layer in layer_types])
+    POSSIBLE_LAYERS = ["family", "colleague", "classmate", "neighbor", "household"]
+    assert all([layer in POSSIBLE_LAYERS for layer in layer_types])
 
     if connected_node_file:
         with Path(data_dir + connected_node_file + "_" + str(year) + ".pkl").open("rb") as pkl_file:
@@ -62,31 +65,44 @@ def load_data(data_dir,
 
             layers.append(edges)
 
-    node_layer_dict = {}
-    for user in unique_users:
-        node_layer_dict[user] = []
-        
-        for i, layer in enumerate(layers):
-            if user in layer:
-                if len(layer[user]) > 0:
-                    node_layer_dict[user].append(i)
 
+    max_user_id = np.max(unique_users)
+    offset = 5
+    layer_edge_dict = {}  
+    for user in unique_users:
+        dict_current_user = {}
+        for idx, layer in enumerate(layers):
+            layer_id = max_user_id + offset + idx
+            if user not in layer:
+                dict_current_user[layer_id] = []
+            else:
+                dict_current_user[layer_id] = layer[user]
+        layer_edge_dict[user] = dict_current_user
+
+#    node_layer_dict = {}
+#    for user in unique_users:
+#        node_layer_dict[user] = []
+#        
+#        for i, layer in enumerate(layers):
+#            if user in layer:
+#                if len(layer[user]) > 0:
+#                    node_layer_dict[user].append(i)
+#
 
     if sample_size > 0:
         rng = np.random.default_rng(seed=95359385252)
         unique_users = list(rng.choice(unique_users, size=sample_size))
 
-    return unique_users, layers, node_layer_dict
+    return unique_users, layer_edge_dict
 
 
 
-def convert_to_numba(users: list, layers: list, node_layer_dict: dict):
+def convert_to_numba(users: list, layer_edge_dict: dict[dict[list]]):
     """Convert python data structures to numba-compatible ones.
     
     Args:
         users: list of node identifiers.
-        layers: list of adjacency lists
-        node_layer_dict: dictionary indicating 
+        layer_edge_dict: dictionary of layer-specific edge lists for each node.
 
     Returns:
         the same objects with data types compatible for numba acceleration.
@@ -96,27 +112,47 @@ def convert_to_numba(users: list, layers: list, node_layer_dict: dict):
     users_numba = List(users)
     users_numba = numba.int64(users_numba)
 
-    node_layer_dict_numba = Dict.empty(
-        key_type=types.int64,
-        value_type=types.int64[:]
-    )   
-    for k, v in node_layer_dict.items():
-        k = types.int64(k)
-        node_layer_dict_numba[k] = np.asarray(v, dtype=np.int64)
+    from numba.types import DictType
+    user_dict_type = DictType(types.int64, types.int64[:]) 
 
-    layers_numba = List()
-    for layer in layers: 
-        layer_numba = Dict.empty(
+    layer_edge_dict_numba = Dict.empty(
             key_type=types.int64,
-            value_type=types.int64[:]
-        )
-        for k, v in layer.items():
-            k = types.int64(k)
-            layer_numba[k] = np.asarray(v, dtype=np.int64)
-    
-        layers_numba.append(layer_numba)
+            value_type=user_dict_type
+    )
 
-    return users_numba, layers_numba, node_layer_dict_numba
+    for user, layer_dict in layer_edge_dict.items():
+        user = types.int64(user)
+        dict_numba = Dict.empty(
+                key_type=types.int64,
+                value_type=types.int64[:]
+        )
+        for layer_id, edgelist in layer_dict.items():
+            layer_id = types.int64(layer_id)
+            dict_numba[layer_id] = np.asarray(edgelist, dtype=np.int64)
+
+        layer_edge_dict_numba[user] = dict_numba
+
+#    node_layer_dict_numba = Dict.empty(
+#        key_type=types.int64,
+#        value_type=types.int64[:]
+#    )   
+#    for k, v in node_layer_dict.items():
+#        k = types.int64(k)
+#        node_layer_dict_numba[k] = np.asarray(v, dtype=np.int64)
+#
+#    layers_numba = List()
+#    for layer in layers: 
+#        layer_numba = Dict.empty(
+#            key_type=types.int64,
+#            value_type=types.int64[:]
+#        )
+#        for k, v in layer.items():
+#            k = types.int64(k)
+#            layer_numba[k] = np.asarray(v, dtype=np.int64)
+#    
+#        layers_numba.append(layer_numba)
+
+    return users_numba, layer_edge_dict_numba
 
 
 # https://stackoverflow.com/questions/8290397/how-to-split-an-iterable-in-constant-size-chunks

@@ -60,13 +60,14 @@ async def main():
 
     print("loading data")    
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
-    users, layers, node_layer_dict = load_data(
+    users, layer_edge_dict = load_data(
         DATA_DIR["input"], YEAR, connected_node_file, layers_to_load, sample_size 
     )
 
     print("converting to numba")
-    users_numba, layers_numba, node_layer_dict_numba = convert_to_numba(users, layers, node_layer_dict)
+    users_numba, layer_edge_dict_numba = convert_to_numba(users, layer_edge_dict)
     
+    breakpoint()
 
     N_WORKERS = get_n_cores(DRY_RUN)
 

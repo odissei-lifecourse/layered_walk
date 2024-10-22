@@ -12,8 +12,7 @@ from src.utils import (
     get_n_cores
 ) 
 from src.walks_numba import create_walks as create_walks_numba
-from src.walks import create_walks as create_walks_python
-
+from src.walks import  create_walks_starting_from_layers
 from config import data_dir
 
 
@@ -51,6 +50,7 @@ async def main():
     WALK_LEN = args.walk_len
     YEAR = args.year
     DEST = args.dest
+    JUMP_PROB = 0.8
 
     layers_to_load = LAYERS
     if DRY_RUN:
@@ -61,7 +61,7 @@ async def main():
 
     print("loading data")    
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
-    users, layer_edge_dict = load_data(
+    users, layer_edge_dict, layer_id_set = load_data(
         DATA_DIR["input"], YEAR, connected_node_file, layers_to_load, sample_size 
     )
 
@@ -72,7 +72,7 @@ async def main():
     N_WORKERS = get_n_cores(DRY_RUN)
 
     def walks_wrapper(users):
-        return create_walks_numba(users, WALK_LEN, layer_edge_dict_numba, 0.8)
+        return create_walks_numba(users, WALK_LEN, layer_edge_dict_numba, JUMP_PROB)
 
     _ = walks_wrapper(users[:10])
 
@@ -80,12 +80,18 @@ async def main():
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
 
-    print("Creating walks with python")
-    breakpoint()
-    walks = create_walks_python(users, WALK_LEN, layer_edge_dict)
-    
     print("Creating walks")
     result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
+   
+    additional_walks = create_walks_starting_from_layers(
+            layer_id_set=layer_id_set,
+            users=users,
+            walk_len=WALK_LEN,
+            layer_edge_dict=layer_edge_dict,
+            p=JUMP_PROB
+            ) 
+    
+    # TODO: append additional_walks to result
 
     print("Saving")
     filename = DATA_DIR["output"] + DEST + "_" + str(YEAR)

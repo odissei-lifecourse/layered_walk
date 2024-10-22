@@ -19,33 +19,46 @@ def load_data(data_dir,
               layer_types: list = ["neighbor", "colleague"],
               sample_size: int = -1
               ):
-    """Load layered network data
-    
+    """
+    Load layered network data from pickle files and process it into a format suitable for further analysis.
+
     Args:
-        data_dir (str): path to the directory with the layers
-        year (int): year of the data to use
-        connected_node_file (str): name of the file with nodes in the biggest connected component. 
-            Needs to be stored as "`data_dir`/`connected_node_file`_`year`.pkl".
-            If not supported, it will take the nodes from the family network as the connected set. 
-            This should only be used on fake data.
-        layer (list, optional): layers of data to load. Must be a subset of 
-            ["family", "colleague", "classmate", "neighbor", "household"]
-        sample_size (int, optional): If non-negative, returns a random sample of this size of connected nodes.
+        data_dir (str): Path to the directory containing the layer data files.
+        year (int): Year of the data to use.
+        connected_node_file (str, optional): Name of the file containing nodes in the largest connected component.
+            Must be stored as "`data_dir`/`connected_node_file`_`year`.pkl".
+            If not provided, nodes from the family network will be used as the connected set (use only with fake data).
+        layer_types (list, optional): Types of network layers to load. Default is ["neighbor", "colleague"].
+            Must be a subset of ["family", "colleague", "classmate", "neighbor", "household"].
+        sample_size (int, optional): If positive, returns a random sample of this size from the connected nodes.
+            Default is -1 (no sampling).
 
     Returns:
-        tuple: (
-            list of users, 
-            list of layers, 
-            dictionary of users indicating on which layers they have at least one connection
-            )
-    
+        tuple: A tuple containing four elements:
+            1. list of int: Unique user IDs in the network.
+            2. dict: A nested dictionary structure where:
+                - The outer key is a user ID.
+                - The inner key is a layer ID (maximum user ID + offset + original layer ID).
+                - The inner value is a list of connected user IDs for that user in that layer.
+            3. set of int: Set of all layer IDs used in the data structure.
+
     Raises:
-        UserWarning when `connected_node_file` is not provided.
-    
+        ValueError: If invalid layer types are provided.
+        UserWarning: When `connected_node_file` is not provided and family network is used instead.
+
+    Notes:
+        - The function loads data from pickle files for each specified layer.
+        - It processes the data to create a unified structure across all layers.
+        - Layer IDs are assigned by adding an offset to the maximum user ID.
+        - If sampling is requested, it's performed on the final set of unique users.
     """
 
-    POSSIBLE_LAYERS = ["family", "colleague", "classmate", "neighbor", "household"]
-    assert all([layer in POSSIBLE_LAYERS for layer in layer_types])
+
+    VALID_LAYERS = ["family", "colleague", "classmate", "neighbor", "household"]
+    OFFSET = 5
+
+    if not all([layer in VALID_LAYERS for layer in layer_types]):
+        raise ValueError("Invalid layers selected.")
 
     if connected_node_file:
         with Path(data_dir + connected_node_file + "_" + str(year) + ".pkl").open("rb") as pkl_file:
@@ -67,31 +80,22 @@ def load_data(data_dir,
 
 
     max_user_id = np.max(unique_users)
-    offset = 5
-    layer_edge_dict = {}  
+    layer_edge_dict = {}
+    layer_id_set = set() # keep track of all layer ids so that we can create walks starting from there
     for user in unique_users:
         dict_current_user = {}
         for idx, layer in enumerate(layers):
-            layer_id = max_user_id + offset + idx
+            layer_id = max_user_id + OFFSET + idx
             if user in layer:
                 dict_current_user[layer_id] = layer[user]
+                layer_id_set.add(layer_id)
         layer_edge_dict[user] = dict_current_user
-
-#    node_layer_dict = {}
-#    for user in unique_users:
-#        node_layer_dict[user] = []
-#        
-#        for i, layer in enumerate(layers):
-#            if user in layer:
-#                if len(layer[user]) > 0:
-#                    node_layer_dict[user].append(i)
-#
 
     if sample_size > 0:
         rng = np.random.default_rng(seed=95359385252)
         unique_users = list(rng.choice(unique_users, size=sample_size))
 
-    return unique_users, layer_edge_dict
+    return unique_users, layer_edge_dict, layer_id_set
 
 
 

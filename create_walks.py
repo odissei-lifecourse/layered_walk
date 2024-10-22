@@ -64,10 +64,19 @@ async def main():
     users, layer_edge_dict, layer_id_set = load_data(
         DATA_DIR["input"], YEAR, connected_node_file, layers_to_load, sample_size 
     )
+    
+    for edge_list in layer_edge_dict.values():
+        for layer in edge_list.items():
+            if len(layer) == 0:
+                raise RuntimeError("found an empty python edge list")
 
     print("converting to numba")
     users_numba, layer_edge_dict_numba = convert_to_numba(users, layer_edge_dict)
     
+    for edge_list in layer_edge_dict_numba.values():
+        for layer in edge_list.items():
+            if len(layer) == 0:
+                raise RuntimeError("found an empty numba edge list")
 
     N_WORKERS = get_n_cores(DRY_RUN)
 
@@ -82,7 +91,8 @@ async def main():
 
     print("Creating walks")
     result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
-   
+    
+    breakpoint()
     additional_walks = create_walks_starting_from_layers(
             layer_id_set=layer_id_set,
             users=users,

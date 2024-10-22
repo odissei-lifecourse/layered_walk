@@ -19,6 +19,7 @@ def custom_sample(choice_set: list):
 def single_walk(start_node: int,
                 walk_len: int, 
                 layer_edge_dict: dict,
+                start_layer: int | None=None,
                 p: float=0.8):
     """Create a single random walk starting at one node.
     
@@ -36,9 +37,12 @@ def single_walk(start_node: int,
     walk = [start_node]
 
 
-    layer_indices = list(layer_edge_dict[current_node].keys())
+    if start_layer is None:
+        layer_indices = list(layer_edge_dict[current_node].keys())
+        layer_index = custom_sample(layer_indices)
+    else:
+        layer_index = start_layer
 
-    layer_index = custom_sample(layer_indices)
     if layer_index == -1:
         return walk # TODO: raise ValueError here? we want all walks to be of the same length?
 
@@ -81,8 +85,47 @@ def create_walks(users: list,
                            layer_edge_dict=layer_edge_dict,
                            p=p)
         walks.append(walk)
-        # TODO: add walks starting from the node identifiers
     return walks
+
+
+def create_walks_starting_from_layers(
+        layer_id_set: set,
+        users: list,
+        walk_len: int, 
+        layer_edge_dict: dict,
+        p: float=0.8):
+    """"Create one walk for each unique layer identifier."""
+
+    walks = []
+    for current_layer in layer_id_set:
+        np.random.shuffle(users)
+        #walk = [current_layer]
+        start_node = None
+        while start_node is None:
+            for current_user in users:
+                if current_layer in layer_edge_dict[current_user]:
+                    start_node = current_user
+         
+        if start_node is None:
+            msg = f"Checked all nodes, and none of them had a connection in layer {current_layer}"
+            raise RuntimeError(msg)
+        
+        # invoke the walk function here with walk_len -1; we might also need to crop the last entry in the created walk
+        regular_walk = single_walk(
+                start_node=start_node, 
+                walk_len=walk_len-1,
+                layer_edge_dict=layer_edge_dict,
+                start_layer=current_layer,
+                p=p)
+        walk = [current_layer] + regular_walk
+         
+        required_length = walk_len + (walk_len-1)
+        walk = walk[:required_length]
+        walks.append(walk)
+    
+    return walks
+
+    
 
 
 

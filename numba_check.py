@@ -67,7 +67,7 @@ async def main():
 
     print("loading data")
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
-    users, layer_edge_dict = load_data(
+    users, layer_edge_dict, _ = load_data(
         DATA_DIR["input"], YEAR, connected_node_file, LAYERS, SAMPLE_SIZE
     )
 

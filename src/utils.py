@@ -87,8 +87,9 @@ def load_data(data_dir,
         for idx, layer in enumerate(layers):
             layer_id = max_user_id + OFFSET + idx
             if user in layer:
-                dict_current_user[layer_id] = layer[user]
-                layer_id_set.add(layer_id)
+                if len(layer[user]) > 0:
+                    dict_current_user[layer_id] = layer[user]
+                    layer_id_set.add(layer_id)
         layer_edge_dict[user] = dict_current_user
 
     if sample_size > 0:

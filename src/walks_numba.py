@@ -59,30 +59,28 @@ def single_walk(start_node: types.int64,
     walk.append(start_node)
 
     
-    #layer_indices = List(layer_edge_dict[current_node].keys())
     layer_indices = np.array(list(layer_edge_dict[current_node].keys()))
     layer_index = custom_sample(layer_indices)
     if layer_index == -1:
-        return walk
+        msg = f"invalid layer index for node {current_node} with layer_indices {layer_indices}"
+        raise RuntimeError(msg)
 
     for draw in np.random.rand(walk_len):
-       # layer_indices = List(layer_edge_dict[current_node].keys())
         layer_indices = np.array(list(layer_edge_dict[current_node].keys()))
-       # layer_indices = node_layer_dict[current_node]
 
         if draw > p or layer_index not in layer_indices:
             layer_index = custom_sample(layer_indices)
             if layer_index == -1:
-                break
+                msg = f"invalid layer index for node {current_node} with layer_indices {layer_indices}"
+                raise RuntimeError(msg)
 
-        #current_layer = layers[layer_index]
         adjacent_nodes = layer_edge_dict[current_node][layer_index]
-        #adjacent_nodes = current_layer[current_node]
 
         walk.append(layer_index) # the first node is indicated by 0
         next_node = custom_sample(adjacent_nodes)
         if next_node == -1:
-            break
+            msg = f"Invalid next_node from adjacent nodes {adjacent_nodes} of current node {current_node} in layer_index {layer_index}"
+            raise RuntimeError(msg) 
         
         walk.append(next_node)
         current_node = next_node

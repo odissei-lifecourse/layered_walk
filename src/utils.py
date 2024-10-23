@@ -182,3 +182,13 @@ def get_n_cores(interactive: bool=False):
     if interactive:
         n_cores = n_cores // 2
     return n_cores
+
+
+def check_layer_edge_dict(layer_edge_dict: Dict):
+    for edge_list in layer_edge_dict.values():
+        for layer in edge_list.values():
+            if len(layer) == 0:
+                raise RuntimeError("Found empty edge list")
+
+
+

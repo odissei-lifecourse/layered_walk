@@ -4,7 +4,7 @@
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 64 
 #SBATCH --nodes=1
-#SBATCH --time=00:30:00
+#SBATCH --time=01:00:00
 #SBATCH --mem=20G
 #SBATCH -p fat_rome
 #SBATCH -e %x-%j.err
@@ -15,7 +15,7 @@ source 2023_snel_modules.sh
 
 source .venv/bin/activate 
 
-python numba_check.py --location snellius 
+python numba_check.py --location snellius
 
 
 

@@ -9,7 +9,8 @@ from src.utils import (
     batched,
     load_data,
     convert_to_numba,
-    get_n_cores
+    get_n_cores,
+    check_layer_edge_dict
 ) 
 from src.walks_numba import create_walks as create_walks_numba
 from src.walks import  create_walks_starting_from_layers
@@ -36,6 +37,8 @@ def parse_args():
     parser.add_argument("--n_walks", help="Number of walks per node", type=int, default=5)
     parser.add_argument("--walk_len", help="Length of walks to generate", type=int, default=50)
     parser.add_argument("--year", help="Which year of the network data to use", type=int, default=2010)
+    parser.add_argument("--debug", help="Debugging. Do additional checks.", 
+            default=False, action=argparse.BooleanOptionalAction)
     return parser.parse_args()
 
 
@@ -50,6 +53,7 @@ async def main():
     WALK_LEN = args.walk_len
     YEAR = args.year
     DEST = args.dest
+    DEBUG = args.debug
     JUMP_PROB = 0.8
 
     layers_to_load = LAYERS
@@ -65,18 +69,14 @@ async def main():
         DATA_DIR["input"], YEAR, connected_node_file, layers_to_load, sample_size 
     )
     
-    for edge_list in layer_edge_dict.values():
-        for layer in edge_list.items():
-            if len(layer) == 0:
-                raise RuntimeError("found an empty python edge list")
+    if DEBUG:
+        check_layer_edge_dict(layer_edge_dict)
 
     print("converting to numba")
     users_numba, layer_edge_dict_numba = convert_to_numba(users, layer_edge_dict)
     
-    for edge_list in layer_edge_dict_numba.values():
-        for layer in edge_list.items():
-            if len(layer) == 0:
-                raise RuntimeError("found an empty numba edge list")
+    if DEBUG:
+        check_layer_edge_dict(layer_edge_dict_numba)
 
     N_WORKERS = get_n_cores(DRY_RUN)
 
@@ -88,11 +88,11 @@ async def main():
     async def create_walks_parallel(users, n_workers):
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
+    
 
     print("Creating walks")
     result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
     
-    breakpoint()
     additional_walks = create_walks_starting_from_layers(
             layer_id_set=layer_id_set,
             users=users,
@@ -100,8 +100,10 @@ async def main():
             layer_edge_dict=layer_edge_dict,
             p=JUMP_PROB
             ) 
-    
-    # TODO: append additional_walks to result
+    required_length = len(result[0][0])
+    additional_walks = [x[:required_length] for x in additional_walks]
+
+    result.append(additional_walks)
 
     print("Saving")
     filename = DATA_DIR["output"] + DEST + "_" + str(YEAR)

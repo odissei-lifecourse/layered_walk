@@ -2,10 +2,12 @@
 import pickle 
 from numba.typed import Dict, List
 from numba.core import types
+from numba.types import DictType
 import numba
 import numpy as np
 from itertools import islice
 from pathlib import Path
+from tqdm import tqdm
 import warnings
 import os 
 
@@ -69,7 +71,7 @@ def load_data(data_dir,
 
 
     layers = []
-    for ltype in layer_types:
+    for ltype in tqdm(layer_types, desc="Loading layers"):
         with Path(data_dir + ltype + "_" + str(year) + "_adjacency_dict.pkl").open("rb") as pkl_file:
             edges = dict(pickle.load(pkl_file))
 
@@ -82,7 +84,7 @@ def load_data(data_dir,
     max_user_id = np.max(unique_users)
     layer_edge_dict = {}
     layer_id_set = set() # keep track of all layer ids so that we can create walks starting from there
-    for user in unique_users:
+    for user in tqdm(unique_users, desc="Creating layer_edge_dict"):
         dict_current_user = {}
         for idx, layer in enumerate(layers):
             layer_id = max_user_id + OFFSET + idx
@@ -115,7 +117,6 @@ def convert_to_numba(users: list, layer_edge_dict: dict[dict[list]]):
     users_numba = List(users)
     users_numba = numba.int64(users_numba)
 
-    from numba.types import DictType
     user_dict_type = DictType(types.int64, types.int64[:]) 
 
     layer_edge_dict_numba = Dict.empty(
@@ -134,26 +135,6 @@ def convert_to_numba(users: list, layer_edge_dict: dict[dict[list]]):
             dict_numba[layer_id] = np.asarray(edgelist, dtype=np.int64)
 
         layer_edge_dict_numba[user] = dict_numba
-
-#    node_layer_dict_numba = Dict.empty(
-#        key_type=types.int64,
-#        value_type=types.int64[:]
-#    )   
-#    for k, v in node_layer_dict.items():
-#        k = types.int64(k)
-#        node_layer_dict_numba[k] = np.asarray(v, dtype=np.int64)
-#
-#    layers_numba = List()
-#    for layer in layers: 
-#        layer_numba = Dict.empty(
-#            key_type=types.int64,
-#            value_type=types.int64[:]
-#        )
-#        for k, v in layer.items():
-#            k = types.int64(k)
-#            layer_numba[k] = np.asarray(v, dtype=np.int64)
-#    
-#        layers_numba.append(layer_numba)
 
     return users_numba, layer_edge_dict_numba
 

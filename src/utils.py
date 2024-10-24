@@ -201,10 +201,11 @@ def save_to_file(data: list[list], filename: str, format="parquet") -> None:
             for result_list in data:
                 for result in result_list:
                     yield {"SOURCE": result[0], **{f"STEP_{i}": step for i, step in enumerate(result[1:])}}
-
+        
+        n_iterations = sample_walk_len * len(data)
         with pq.ParquetWriter(filename + ".parquet", schema) as writer:
             batch = []
-            for row in tqdm(data_generator(), "Writing to parquet"):
+            for row in tqdm(data_generator(), desc="Writing to parquet", total=n_iterations):
                 batch.append(row)
                 if len(batch) >= BATCH_SIZE_PARQUET:
                     table = pa.Table.from_pylist(batch, schema=schema)

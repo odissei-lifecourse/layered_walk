@@ -97,6 +97,7 @@ async def main():
             layer_id_set=layer_id_set,
             users=users,
             walk_len=WALK_LEN,
+            n_walks=N_WALKS,
             layer_edge_dict=layer_edge_dict,
             p=JUMP_PROB
             ) 

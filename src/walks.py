@@ -88,6 +88,7 @@ def create_walks_starting_from_layers(
         layer_id_set: set,
         users: list,
         walk_len: int, 
+        n_walks: int,
         layer_edge_dict: dict,
         p: float=0.8):
     """"Create one walk for each unique layer identifier.
@@ -97,6 +98,7 @@ def create_walks_starting_from_layers(
         will be created.
         users (list): List of unique node identifiers.
         walk_len (int): length of the walk to generate.
+        n_walks (int): Number of walks to generate for each layer.
         layer_edge_dict: Dictionary where keys are node identifiers and values are dictionaries 
         of non-empty edge lists for each layer.
         p: probability of changing layer.
@@ -106,7 +108,7 @@ def create_walks_starting_from_layers(
     """
 
     walks = []
-    for current_layer in layer_id_set:
+    for current_layer in np.tile(list(layer_id_set), n_walks):
         np.random.shuffle(users)
         start_node = None
         

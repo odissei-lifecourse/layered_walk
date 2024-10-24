@@ -12,7 +12,8 @@ from src.utils import (
     load_data,
     convert_to_numba,
     get_n_cores,
-    check_layer_edge_dict
+    check_layer_edge_dict,
+    save_to_file
 ) 
 from src.walks_numba import create_walks as create_walks_numba
 from src.walks import  create_walks_starting_from_layers
@@ -113,41 +114,7 @@ async def main():
     if DRY_RUN:
         filename += "_dry"
 
-    sample_walk = result[0][0]
-    sample_walk_len = len(sample_walk)
-    field_col0 = [pa.field("SOURCE", pa.int64())] 
-    other_fields = [pa.field(f"STEP_{i}", pa.int64()) for i in range(sample_walk_len - 1)]
-    fields = field_col0 + other_fields
-    schema = pa.schema(fields)
-
-    def data_generator():
-        for walks in result:
-            for walk in walks:
-                yield {"SOURCE": walk[0], **{f"STEP_{i}": step for i, step in enumerate(walk[1:])}}
-
-    batch_size = 100_000
-    with pq.ParquetWriter(filename + ".parquet", schema) as writer:
-        batch = []
-        for row in data_generator():
-            batch.append(row)
-            if len(batch) >= batch_size:
-                table = pa.Table.from_pylist(batch, schema=schema)
-                writer.write_table(table)
-                batch.clear()
-
-        if batch:
-            table = pa.Table.from_pylist(batch, schema=schema)
-            writer.write_table(table)
-
-
-    with Path(filename + ".csv").open("w") as csv_file:
-        sample_walk = result[0][0]
-        sample_walk_len = len(sample_walk)
-        writer = csv.writer(csv_file, delimiter=",")
-        header_row = ["SOURCE"] + ["STEP_" + str(i) for i in range(sample_walk_len-1)]
-        writer.writerow(header_row)
-        for walks in result:
-            writer.writerows(walks)
+    save_to_file(result, filename, "parquet")
 
 
 

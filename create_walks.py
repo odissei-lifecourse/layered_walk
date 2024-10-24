@@ -4,15 +4,18 @@ import argparse
 import numpy as np
 from pathlib import Path
 import csv 
+import pyarrow as pa 
+import pyarrow.parquet as pq
 
 from src.utils import (
     batched,
     load_data,
     convert_to_numba,
-    get_n_cores
+    get_n_cores,
+    check_layer_edge_dict
 ) 
 from src.walks_numba import create_walks as create_walks_numba
-
+from src.walks import  create_walks_starting_from_layers
 from config import data_dir
 
 
@@ -36,6 +39,8 @@ def parse_args():
     parser.add_argument("--n_walks", help="Number of walks per node", type=int, default=5)
     parser.add_argument("--walk_len", help="Length of walks to generate", type=int, default=50)
     parser.add_argument("--year", help="Which year of the network data to use", type=int, default=2010)
+    parser.add_argument("--debug", help="Debugging. Do additional checks.", 
+            default=False, action=argparse.BooleanOptionalAction)
     return parser.parse_args()
 
 
@@ -50,6 +55,8 @@ async def main():
     WALK_LEN = args.walk_len
     YEAR = args.year
     DEST = args.dest
+    DEBUG = args.debug
+    JUMP_PROB = 0.8
 
     layers_to_load = LAYERS
     if DRY_RUN:
@@ -60,18 +67,23 @@ async def main():
 
     print("loading data")    
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
-    users, layers, node_layer_dict = load_data(
+    users, layer_edge_dict, layer_id_set = load_data(
         DATA_DIR["input"], YEAR, connected_node_file, layers_to_load, sample_size 
     )
+    
+    if DEBUG:
+        check_layer_edge_dict(layer_edge_dict)
 
     print("converting to numba")
-    users_numba, layers_numba, node_layer_dict_numba = convert_to_numba(users, layers, node_layer_dict)
+    users_numba, layer_edge_dict_numba = convert_to_numba(users, layer_edge_dict)
     
+    if DEBUG:
+        check_layer_edge_dict(layer_edge_dict_numba)
 
     N_WORKERS = get_n_cores(DRY_RUN)
 
     def walks_wrapper(users):
-        return create_walks_numba(users, WALK_LEN, node_layer_dict_numba, layers_numba, 0.8)
+        return create_walks_numba(users, WALK_LEN, layer_edge_dict_numba, JUMP_PROB)
 
     _ = walks_wrapper(users[:10])
 
@@ -79,13 +91,54 @@ async def main():
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
     
+
     print("Creating walks")
     result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
+    
+    additional_walks = create_walks_starting_from_layers(
+            layer_id_set=layer_id_set,
+            users=users,
+            walk_len=WALK_LEN,
+            n_walks=N_WALKS,
+            layer_edge_dict=layer_edge_dict,
+            p=JUMP_PROB
+            ) 
+    required_length = len(result[0][0])
+    additional_walks = [x[:required_length] for x in additional_walks]
+
+    result.append(additional_walks)
 
     print("Saving")
     filename = DATA_DIR["output"] + DEST + "_" + str(YEAR)
     if DRY_RUN:
         filename += "_dry"
+
+    sample_walk = result[0][0]
+    sample_walk_len = len(sample_walk)
+    field_col0 = [pa.field("SOURCE", pa.int64())] 
+    other_fields = [pa.field(f"STEP_{i}", pa.int64()) for i in range(sample_walk_len - 1)]
+    fields = field_col0 + other_fields
+    schema = pa.schema(fields)
+
+    def data_generator():
+        for walks in result:
+            for walk in walks:
+                yield {"SOURCE": walk[0], **{f"STEP_{i}": step for i, step in enumerate(walk[1:])}}
+
+    batch_size = 100_000
+    with pq.ParquetWriter(filename + ".parquet", schema) as writer:
+        batch = []
+        for row in data_generator():
+            batch.append(row)
+            if len(batch) >= batch_size:
+                table = pa.Table.from_pylist(batch, schema=schema)
+                writer.write_table(table)
+                batch.clear()
+
+        if batch:
+            table = pa.Table.from_pylist(batch, schema=schema)
+            writer.write_table(table)
+
 
     with Path(filename + ".csv").open("w") as csv_file:
         sample_walk = result[0][0]

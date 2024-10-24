@@ -2,12 +2,17 @@
 import pickle 
 from numba.typed import Dict, List
 from numba.core import types
+from numba.types import DictType
 import numba
 import numpy as np
 from itertools import islice
 from pathlib import Path
+from tqdm import tqdm
 import warnings
 import os 
+
+
+
 
 
 def load_data(data_dir, 
@@ -16,33 +21,46 @@ def load_data(data_dir,
               layer_types: list = ["neighbor", "colleague"],
               sample_size: int = -1
               ):
-    """Load layered network data
-    
+    """
+    Load layered network data from pickle files and process it into a format suitable for further analysis.
+
     Args:
-        data_dir (str): path to the directory with the layers
-        year (int): year of the data to use
-        connected_node_file (str): name of the file with nodes in the biggest connected component. 
-            Needs to be stored as "`data_dir`/`connected_node_file`_`year`.pkl".
-            If not supported, it will take the nodes from the family network as the connected set. 
-            This should only be used on fake data.
-        layer (list, optional): layers of data to load. Must be a subset of 
-            ["family", "colleague", "classmate", "neighbor", "household"]
-        sample_size (int, optional): If non-negative, returns a random sample of this size of connected nodes.
+        data_dir (str): Path to the directory containing the layer data files.
+        year (int): Year of the data to use.
+        connected_node_file (str, optional): Name of the file containing nodes in the largest connected component.
+            Must be stored as "`data_dir`/`connected_node_file`_`year`.pkl".
+            If not provided, nodes from the family network will be used as the connected set (use only with fake data).
+        layer_types (list, optional): Types of network layers to load. Default is ["neighbor", "colleague"].
+            Must be a subset of ["family", "colleague", "classmate", "neighbor", "household"].
+        sample_size (int, optional): If positive, returns a random sample of this size from the connected nodes.
+            Default is -1 (no sampling).
 
     Returns:
-        tuple: (
-            list of users, 
-            list of layers, 
-            dictionary of users indicating on which layers they have at least one connection
-            )
-    
+        tuple: A tuple containing four elements:
+            1. list of int: Unique user IDs in the network.
+            2. dict: A nested dictionary structure where:
+                - The outer key is a user ID.
+                - The inner key is a layer ID (maximum user ID + offset + original layer ID).
+                - The inner value is a list of connected user IDs for that user in that layer.
+            3. set of int: Set of all layer IDs used in the data structure.
+
     Raises:
-        UserWarning when `connected_node_file` is not provided.
-    
+        ValueError: If invalid layer types are provided.
+        UserWarning: When `connected_node_file` is not provided and family network is used instead.
+
+    Notes:
+        - The function loads data from pickle files for each specified layer.
+        - It processes the data to create a unified structure across all layers.
+        - Layer IDs are assigned by adding an offset to the maximum user ID.
+        - If sampling is requested, it's performed on the final set of unique users.
     """
 
-    possible_layers = ["family", "colleague", "classmate", "neighbor", "household"]
-    assert all([layer in possible_layers for layer in layer_types])
+
+    VALID_LAYERS = ["family", "colleague", "classmate", "neighbor", "household"]
+    OFFSET = 5
+
+    if not all([layer in VALID_LAYERS for layer in layer_types]):
+        raise ValueError("Invalid layers selected.")
 
     if connected_node_file:
         with Path(data_dir + connected_node_file + "_" + str(year) + ".pkl").open("rb") as pkl_file:
@@ -53,7 +71,7 @@ def load_data(data_dir,
 
 
     layers = []
-    for ltype in layer_types:
+    for ltype in tqdm(layer_types, desc="Loading layers"):
         with Path(data_dir + ltype + "_" + str(year) + "_adjacency_dict.pkl").open("rb") as pkl_file:
             edges = dict(pickle.load(pkl_file))
 
@@ -62,31 +80,34 @@ def load_data(data_dir,
 
             layers.append(edges)
 
-    node_layer_dict = {}
-    for user in unique_users:
-        node_layer_dict[user] = []
-        
-        for i, layer in enumerate(layers):
+
+    max_user_id = np.max(unique_users)
+    layer_edge_dict = {}
+    layer_id_set = set() # keep track of all layer ids so that we can create walks starting from there
+    for user in tqdm(unique_users, desc="Creating layer_edge_dict"):
+        dict_current_user = {}
+        for idx, layer in enumerate(layers):
+            layer_id = max_user_id + OFFSET + idx
             if user in layer:
                 if len(layer[user]) > 0:
-                    node_layer_dict[user].append(i)
-
+                    dict_current_user[layer_id] = layer[user]
+                    layer_id_set.add(layer_id)
+        layer_edge_dict[user] = dict_current_user
 
     if sample_size > 0:
         rng = np.random.default_rng(seed=95359385252)
         unique_users = list(rng.choice(unique_users, size=sample_size))
 
-    return unique_users, layers, node_layer_dict
+    return unique_users, layer_edge_dict, layer_id_set
 
 
 
-def convert_to_numba(users: list, layers: list, node_layer_dict: dict):
+def convert_to_numba(users: list, layer_edge_dict: dict[dict[list]]):
     """Convert python data structures to numba-compatible ones.
     
     Args:
         users: list of node identifiers.
-        layers: list of adjacency lists
-        node_layer_dict: dictionary indicating 
+        layer_edge_dict: dictionary of layer-specific edge lists for each node.
 
     Returns:
         the same objects with data types compatible for numba acceleration.
@@ -96,27 +117,26 @@ def convert_to_numba(users: list, layers: list, node_layer_dict: dict):
     users_numba = List(users)
     users_numba = numba.int64(users_numba)
 
-    node_layer_dict_numba = Dict.empty(
-        key_type=types.int64,
-        value_type=types.int64[:]
-    )   
-    for k, v in node_layer_dict.items():
-        k = types.int64(k)
-        node_layer_dict_numba[k] = np.asarray(v, dtype=np.int64)
+    user_dict_type = DictType(types.int64, types.int64[:]) 
 
-    layers_numba = List()
-    for layer in layers: 
-        layer_numba = Dict.empty(
+    layer_edge_dict_numba = Dict.empty(
             key_type=types.int64,
-            value_type=types.int64[:]
-        )
-        for k, v in layer.items():
-            k = types.int64(k)
-            layer_numba[k] = np.asarray(v, dtype=np.int64)
-    
-        layers_numba.append(layer_numba)
+            value_type=user_dict_type
+    )
 
-    return users_numba, layers_numba, node_layer_dict_numba
+    for user, layer_dict in layer_edge_dict.items():
+        user = types.int64(user)
+        dict_numba = Dict.empty(
+                key_type=types.int64,
+                value_type=types.int64[:]
+        )
+        for layer_id, edgelist in layer_dict.items():
+            layer_id = types.int64(layer_id)
+            dict_numba[layer_id] = np.asarray(edgelist, dtype=np.int64)
+
+        layer_edge_dict_numba[user] = dict_numba
+
+    return users_numba, layer_edge_dict_numba
 
 
 # https://stackoverflow.com/questions/8290397/how-to-split-an-iterable-in-constant-size-chunks
@@ -143,3 +163,13 @@ def get_n_cores(interactive: bool=False):
     if interactive:
         n_cores = n_cores // 2
     return n_cores
+
+
+def check_layer_edge_dict(layer_edge_dict: Dict):
+    for edge_list in layer_edge_dict.values():
+        for layer in edge_list.values():
+            if len(layer) == 0:
+                raise RuntimeError("Found empty edge list")
+
+
+

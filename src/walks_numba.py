@@ -51,7 +51,8 @@ def single_walk(start_node: types.int64,
         p: probability of resampling the layer. 
     
     Returns:
-        list: a sequence of node identifiers
+        list: a sequence of walks, alternating between node identifiers and edge identifiers.
+        The length of the resulting list is 1 + 2*walk_len.
     """
     current_node = start_node
 

@@ -8,16 +8,16 @@ from src.utils import (
 from src.walks import create_walks_starting_from_layers
 import pyarrow as pa
 import pyarrow.parquet as pq
-from typing import Callable, AsyncGenerator
+from typing import Callable, AsyncIterator
 
 
-async def parallel_walks_generator(walk_fct: Callable, users, n_workers) -> AsyncGenerator[dict]:
+async def parallel_walks_generator(walk_fct: Callable, users, n_workers: int) -> AsyncIterator[dict[str, int]]:
     """Generate walks in parallel.
 
     Args:
-        walk_fct: the function creating the random walks.
-        users: the identifiers of the nodes from which walks start.
-        n_workers: the number of cores for parallel processing.
+        `walk_fct`: the function creating the random walks. The function needs to iterate over `users`.
+        `users`: the identifiers of the nodes from which walks start.
+        `n_workers`: the number of cores for parallel processing.
 
     Returns:
         A generator with dictionaries of walks. The keys are column names, the values
@@ -49,14 +49,14 @@ async def process_nodes(
     also added to the result.
 
     Args:
-        walk_fct: the function creating the random walks.
-        users: the identifiers of the nodes from which walks start.
-        layer_id_set: set of layer identifiers.
-        layer_edge_dict: dictionary of adjacency dict for each node.
-        n_workers: the number of cores for parallel processing.
-        filename: file to save, without suffix.
-        walk_len: length of walks to generate.
-        jump_prob: probability of changing layers.
+        `walk_fct`: the function creating the random walks.
+        `users`: the identifiers of the nodes from which walks start.
+        `layer_id_set`: set of layer identifiers.
+        `layer_edge_dict`: dictionary of adjacency dict for each node.
+        `n_workers`: the number of cores for parallel processing.
+        `filename`: file to save, without suffix.
+        `walk_len`: length of walks to generate.
+        `jump_prob`: probability of changing layers.
     """
     CHUNK_SIZE = 100_000
 
@@ -74,12 +74,12 @@ async def process_nodes(
 
         chunk_count += 1
         if chunk_count >= CHUNK_SIZE:
-            writer = await write_chunk(results, writer, filename, schema)
+            writer = await write_chunk(results, schema, filename, writer)
             results.clear()
             chunk_count = 0
 
     if results:
-        writer = await write_chunk(results, writer, filename, schema)
+        writer = await write_chunk(results, schema, filename, writer)
 
     # add walks starting at node ids
     additional_walks = create_walks_starting_from_layers(
@@ -95,7 +95,7 @@ async def process_nodes(
         temp_dict = {"SOURCE": result[0], **{f"STEP_{i}": step for i, step in enumerate(result[1:])}}
         add_walks_writeable.append(temp_dict)
 
-    writer = await write_chunk(add_walks_writeable, writer, filename, schema)
+    writer = await write_chunk(add_walks_writeable, schema, filename, writer)
 
     if writer:
         writer.close()

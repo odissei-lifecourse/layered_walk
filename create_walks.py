@@ -129,7 +129,7 @@ async def main():
     async def process_nodes(users, n_workers, filename):
         # define schema
         field_col0 = [pa.field("SOURCE", pa.int64())] 
-        other_fields = [pa.field(f"STEP_{i}", pa.int64()) for i in range(WALK_LEN)]
+        other_fields = [pa.field(f"STEP_{i}", pa.int64()) for i in range(2*WALK_LEN)]
         fields = field_col0 + other_fields
         schema = pa.schema(fields)
 
@@ -140,13 +140,13 @@ async def main():
             results.append(result)
 
             chunk_count += 1
-            if chunk_count >= 1000:
-                await write_chunk(results, writer, filename, schema)
+            if chunk_count >= 100_000:
+                writer = await write_chunk(results, writer, filename, schema)
                 results.clear()
                 chunk_count = 0
 
         if results:
-            await write_chunk(results, writer, filename, schema)
+            writer = await write_chunk(results, writer, filename, schema)
 
         # add walks starting at node ids
         additional_walks = create_walks_starting_from_layers(
@@ -157,7 +157,12 @@ async def main():
                 layer_edge_dict=layer_edge_dict,
                 p=JUMP_PROB)
 
-        await write_chunk(additional_walks, writer, filename, schema)
+        add_walks_writeable = []
+        for result in additional_walks:
+            temp_dict = {"SOURCE": result[0], **{f"STEP_{i}": step for i, step in enumerate(result[1:])}}
+            add_walks_writeable.append(temp_dict)
+
+        writer = await write_chunk(add_walks_writeable, writer, filename, schema)
 
         if writer:
             writer.close()

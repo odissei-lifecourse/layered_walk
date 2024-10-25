@@ -34,6 +34,39 @@ async def parallel_walks_generator(walk_fct: Callable, users, n_workers: int) ->
             yield {"SOURCE": result[0], **{f"STEP_{i}": step for i, step in enumerate(result[1:])}}
 
 
+async def producer(walk_fct: Callable, batch, queue: asyncio.Queue):
+    """Producer coroutine to run the walk function and put results in the queue."""
+    results = await asyncio.to_thread(walk_fct, batch)
+    for result in results:
+        await queue.put({"SOURCE": result[0], **{f"STEP_{i}": step for i, step in enumerate(result[1:])}})
+
+
+async def consumer(queue: asyncio.Queue, schema: dict, filename: str, threshold: int=100_000):
+    """Consumer coroutine to write batches to a file once threshold is met."""
+    buffer = []
+    writer = None
+    while True:
+        item = await queue.get()
+        if item is None:  # Sentinel value to signal completion
+            break
+        buffer.append(item)
+        
+        # Write to file when buffer reaches threshold
+        if len(buffer) >= threshold:
+            writer = await write_chunk(buffer, schema, filename, writer)
+            buffer.clear()
+        queue.task_done()
+
+    # Write any remaining items in the buffer
+    if buffer:
+        writer = await write_chunk(buffer, schema, filename, writer)
+
+    return writer
+
+
+
+
+
 async def process_nodes(
         walk_fct: Callable, 
         users, # TODO: add type annotation. numba list? 
@@ -66,20 +99,36 @@ async def process_nodes(
     fields = field_col0 + other_fields
     schema = pa.schema(fields)
 
-    results = [] 
-    chunk_count = 0
-    writer = None
-    async for result in parallel_walks_generator(walk_fct, users, n_workers):
-        results.append(result)
+    queue = asyncio.Queue()
+    batched_users = list(batched(users, len(users) // n_workers))
 
-        chunk_count += 1
-        if chunk_count >= CHUNK_SIZE:
-            writer = await write_chunk(results, schema, filename, writer)
-            results.clear()
-            chunk_count = 0
+    consumer_task = asyncio.create_task(
+            consumer(queue, schema, filename, CHUNK_SIZE))
 
-    if results:
-        writer = await write_chunk(results, schema, filename, writer)
+    producers = [
+        asyncio.create_task(producer(walk_fct, batch, queue))
+        for batch in batched_users
+    ]
+
+    await asyncio.gather(*producers)
+
+    await queue.put(None)
+    writer = await consumer_task
+
+    #results = [] 
+    #chunk_count = 0
+    #writer = None
+    #async for result in parallel_walks_generator(walk_fct, users, n_workers):
+    #    results.append(result)
+
+    #    chunk_count += 1
+    #    if chunk_count >= CHUNK_SIZE:
+    #        writer = await write_chunk(results, schema, filename, writer)
+    #        results.clear()
+    #        chunk_count = 0
+
+    #if results:
+    #    writer = await write_chunk(results, schema, filename, writer)
 
     # add walks starting at node ids
     additional_walks = create_walks_starting_from_layers(
@@ -101,7 +150,11 @@ async def process_nodes(
         writer.close()
 
 
-async def write_chunk(results: list, schema: dict[str, int], filename: str, writer: pq.ParquetWriter | None) -> None:
+async def write_chunk(
+        results: list, 
+        schema: dict[str, int], 
+        filename: str, 
+        writer: pq.ParquetWriter | None) -> None:
     table = pa.Table.from_pylist(results)
     if writer is None:
         writer = pq.ParquetWriter(filename + ".parquet", schema)

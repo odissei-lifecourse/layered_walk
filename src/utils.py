@@ -128,7 +128,7 @@ def convert_to_numba(users: list, layer_edge_dict: dict[dict[list]]):
             value_type=user_dict_type
     )
 
-    for user, layer_dict in layer_edge_dict.items():
+    for user, layer_dict in tqdm(layer_edge_dict.items(), desc="Converting layer_edge_dict to numba"):
         user = types.int64(user)
         dict_numba = Dict.empty(
                 key_type=types.int64,

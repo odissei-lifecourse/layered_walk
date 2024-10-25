@@ -2,10 +2,7 @@
 import asyncio
 import argparse
 import numpy as np
-from pathlib import Path
-import csv 
-import pyarrow as pa 
-import pyarrow.parquet as pq
+import logging 
 
 from src.utils import (
     batched,
@@ -19,6 +16,8 @@ from src.walks_numba import create_walks as create_walks_numba
 from src.walks import  create_walks_starting_from_layers
 from config import data_dir
 
+
+logger = logging.getLogger(__name__)
 
 LAYERS = ["classmate", "household", "family", "colleague", "neighbor"]
 LOCATION_CHOICES = ["snellius", "local", "ossc"]
@@ -49,6 +48,14 @@ def parse_args():
 async def main():
 
     args = parse_args()
+    
+    logging.basicConfig(
+        format="%(asctime)s %(name)s %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=logging.INFO
+      )
+
+
     DRY_RUN = args.dry_run
     LOCATION = args.location
     DATA_DIR = data_dir[LOCATION]
@@ -66,7 +73,7 @@ async def main():
     if DRY_RUN:
         sample_size = SAMPLE_SIZE_DRY_RUN
 
-    print("loading data")    
+    logger.info("Loading data")    
     connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
     users, layer_edge_dict, layer_id_set = load_data(
         DATA_DIR["input"], YEAR, connected_node_file, layers_to_load, sample_size 
@@ -75,7 +82,7 @@ async def main():
     if DEBUG:
         check_layer_edge_dict(layer_edge_dict)
 
-    print("converting to numba")
+    logger.info("Converting to numba")
     users_numba, layer_edge_dict_numba = convert_to_numba(users, layer_edge_dict)
     
     if DEBUG:
@@ -93,7 +100,7 @@ async def main():
         return result 
     
 
-    print("Creating walks")
+    logger.info("Creating walks")
     result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
     
     additional_walks = create_walks_starting_from_layers(
@@ -109,12 +116,13 @@ async def main():
 
     result.append(additional_walks)
 
-    print("Saving")
+    logger.info("Saving")
     filename = DATA_DIR["output"] + DEST + "_" + str(YEAR)
     if DRY_RUN:
         filename += "_dry"
 
     save_to_file(result, filename, "parquet")
+    logger.info("Done.")
 
 
 

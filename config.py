@@ -5,7 +5,7 @@ config_dict = {
     "big": {
         "layers":  ["classmate", "household", "family", "colleague", "neighbor"],
         "walk_len": 50,
-        "sample_size": 100_000
+        "sample_size": 200_000
     },
     "small": {
         "layers": ["neighbor", "colleague"],

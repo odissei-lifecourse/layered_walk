@@ -5,7 +5,7 @@ from numba.core import types
 
 
 @numba.njit(nogil=True)
-def custom_sample(choice_set: list):
+def custom_sample(choice_set: List):
     "custom function to apply np.random.choice"
     if len(choice_set) == 0:
         return -1 
@@ -20,8 +20,7 @@ def custom_sample(choice_set: list):
 def create_walks(
     nodes: numba.int64[:],
     walk_len: int,
-    node_layer_dict: numba.typed.Dict,
-    layers: numba.typed.List,
+    layer_edge_dict: numba.typed.Dict,
     p: float=0.8
     ):
     result = List()
@@ -29,8 +28,7 @@ def create_walks(
         res = single_walk(
             node, 
             walk_len,
-            node_layer_dict,
-            layers,
+            layer_edge_dict,
             p
         )
         result.append(res)
@@ -41,8 +39,7 @@ def create_walks(
 @numba.njit(nogil=True)
 def single_walk(start_node: types.int64,
                 walk_len: int, 
-                node_layer_dict: numba.typed.Dict, 
-                layers: numba.typed.List,
+                layer_edge_dict: numba.typed.Dict,
                 p: float=0.8):
     """Create a single random walk starting at one node.
     
@@ -61,27 +58,29 @@ def single_walk(start_node: types.int64,
     walk = List.empty_list(types.int64)
     walk.append(start_node)
 
-
-    layer_indices = node_layer_dict[current_node]
+    
+    layer_indices = np.array(list(layer_edge_dict[current_node].keys()))
     layer_index = custom_sample(layer_indices)
     if layer_index == -1:
-        return walk
+        msg = f"invalid layer index for node {current_node} with layer_indices {layer_indices}"
+        raise RuntimeError(msg)
 
     for draw in np.random.rand(walk_len):
-        layer_indices = node_layer_dict[current_node]
+        layer_indices = np.array(list(layer_edge_dict[current_node].keys()))
 
         if draw > p or layer_index not in layer_indices:
             layer_index = custom_sample(layer_indices)
             if layer_index == -1:
-                break
+                msg = f"invalid layer index for node {current_node} with layer_indices {layer_indices}"
+                raise RuntimeError(msg)
 
-        current_layer = layers[layer_index]
-        adjacent_nodes = current_layer[current_node]
+        adjacent_nodes = layer_edge_dict[current_node][layer_index]
 
-        walk.append(-layer_index - 1) # the first node is indicated by 0
+        walk.append(layer_index) # the first node is indicated by 0
         next_node = custom_sample(adjacent_nodes)
         if next_node == -1:
-            break
+            msg = f"Invalid next_node from adjacent nodes {adjacent_nodes} of current node {current_node} in layer_index {layer_index}"
+            raise RuntimeError(msg) 
         
         walk.append(next_node)
         current_node = next_node

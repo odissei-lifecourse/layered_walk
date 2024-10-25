@@ -15,7 +15,7 @@ from src.utils import (
 from src.walks_numba import create_walks as create_walks_numba
 from src.walks import  create_walks_starting_from_layers
 from config import data_dir
-
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -100,27 +100,28 @@ async def main():
     
 
     logger.info("Creating walks")
-    result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
+    for i in tqdm(range(N_WALKS)):
+        result = await create_walks_parallel(users_numba, N_WORKERS)
+        additional_walks = create_walks_starting_from_layers(
+                layer_id_set=layer_id_set,
+                users=users,
+                walk_len=WALK_LEN,
+                n_walks=N_WALKS,
+                layer_edge_dict=layer_edge_dict,
+                p=JUMP_PROB
+                ) 
+        required_length = len(result[0][0])
+        additional_walks = [x[:required_length] for x in additional_walks]
     
-    additional_walks = create_walks_starting_from_layers(
-            layer_id_set=layer_id_set,
-            users=users,
-            walk_len=WALK_LEN,
-            n_walks=N_WALKS,
-            layer_edge_dict=layer_edge_dict,
-            p=JUMP_PROB
-            ) 
-    required_length = len(result[0][0])
-    additional_walks = [x[:required_length] for x in additional_walks]
+        result.append(additional_walks)
+    
+        logger.info("Saving")
+        filename = DATA_DIR["output"] + DEST + "_" + str(YEAR) + "_" + i
+        if DRY_RUN:
+            filename += "_dry"
+    
+        save_to_file(result, filename, "parquet")
 
-    result.append(additional_walks)
-
-    logger.info("Saving")
-    filename = DATA_DIR["output"] + DEST + "_" + str(YEAR)
-    if DRY_RUN:
-        filename += "_dry"
-
-    save_to_file(result, filename, "parquet")
     logger.info("Done.")
 
 

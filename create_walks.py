@@ -111,6 +111,7 @@ async def main():
         if DRY_RUN:
             filename += "_dry"
         
+        logger.info(f"Have {len(users_numba)} nodes to create walks from")
         await process_nodes(
                 walk_fct=walks_wrapper, 
                 users=users_numba,

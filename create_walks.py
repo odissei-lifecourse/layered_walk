@@ -48,14 +48,6 @@ def parse_args():
 async def main():
 
     args = parse_args()
-    
-    logging.basicConfig(
-        format="%(asctime)s %(name)s %(levelname)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.INFO
-      )
-
-
     DRY_RUN = args.dry_run
     LOCATION = args.location
     DATA_DIR = data_dir[LOCATION]
@@ -65,6 +57,13 @@ async def main():
     DEST = args.dest
     DEBUG = args.debug
     JUMP_PROB = 0.8
+
+    logging_level = logging.DEBUG if DEBUG else logging.INFO
+    logging.basicConfig(
+            format="%(asctime)s %(name)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+            level=logging_level
+            )
 
     layers_to_load = LAYERS
     if DRY_RUN:

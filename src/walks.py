@@ -129,6 +129,8 @@ def create_walks_starting_from_layers(
                 start_layer=current_layer,
                 p=p)
         walk = [current_layer] + regular_walk
+        expected_length = 1 + 2*walk_len
+        walk = walk[:expected_length]
         walks.append(walk)
     
     return walks

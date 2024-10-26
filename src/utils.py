@@ -177,46 +177,20 @@ def check_layer_edge_dict(layer_edge_dict: Dict):
 
 
 
-def save_to_file(data: list[list], filename: str, format="parquet") -> None:
-    """Save a list of list to parquet or csv."""
-    BATCH_SIZE_PARQUET = 100_000
-    sample_walk = data[0][0]
-    sample_walk_len = len(sample_walk)
+def save_to_parquet(data: np.ndarray, filename: str) -> None:
+    """Save a list of list to parquet."""
 
-    if format == "csv":
-        with Path(filename + ".csv").open("w") as csv_file:
-            writer = csv.writer(csv_file, delimiter=",")
-            header_row = ["SOURCE"] + ["STEP_" + str(i) for i in range(sample_walk_len-1)]
-            writer.writerow(header_row)
-            for result_list in tqdm(data, desc="Writing csv"):
-                writer.writerows(result_list)
+    n_cols = data.shape[1]
+    source_col = ["SOURCE"]
+    walk_cols = [f"STEP_{i}" for i in range(n_cols-1)]
+    col_names = source_col + walk_cols
 
-    else:
-        field_col0 = [pa.field("SOURCE", pa.int64())] 
-        other_fields = [pa.field(f"STEP_{i}", pa.int64()) for i in range(sample_walk_len - 1)]
-        fields = field_col0 + other_fields
-        schema = pa.schema(fields)
+    table = pa.Table.from_arrays(
+            [data[:, i] for i in range(n_cols)], 
+            names=col_names
+        )
 
-        def data_generator():
-            for result_list in data:
-                for result in result_list:
-                    yield {"SOURCE": result[0], **{f"STEP_{i}": step for i, step in enumerate(result[1:])}}
-        
-        n_iterations = sample_walk_len * len(data)
-        with pq.ParquetWriter(filename + ".parquet", schema) as writer:
-            batch = []
-            for row in tqdm(data_generator(), desc="Writing to parquet", total=n_iterations):
-                batch.append(row)
-                if len(batch) >= BATCH_SIZE_PARQUET:
-                    table = pa.Table.from_pylist(batch, schema=schema)
-                    writer.write_table(table)
-                    batch.clear()
-
-            if batch:
-                table = pa.Table.from_pylist(batch, schema=schema)
-                writer.write_table(table)
-
-
+    pq.write_table(table, filename + ".parquet")
 
 
 

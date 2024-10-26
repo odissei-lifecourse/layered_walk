@@ -32,7 +32,27 @@ def create_walks(
             p
         )
         result.append(res)
-    return result
+    
+    #return result 
+    
+    # try converting to numpy
+    # pro: numba for loops are fast, plus it's done by the workers. plus,
+    # writing becomes very fast too.
+    # con: more memory (?); overhead operation but it's faster
+        # the memory issue should be checked in more detail: compare
+        # memory usage with this process and without (only calling the workers, not writing)
+    # than concatenating the result in the main process
+    # see github discussion. 
+    # TODO: put into a separate function
+    A = result[0]
+    a = np.empty((len(result), len(A)), dtype=A._dtype)
+    for i, v in enumerate(result):
+        temp_arr = np.empty(len(v), dtype=v._dtype)
+        for j, w in enumerate(v):
+            temp_arr[j] = w
+        a[i] = temp_arr
+    return a
+
 
 
 

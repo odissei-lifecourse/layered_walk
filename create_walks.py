@@ -10,7 +10,7 @@ from src.utils import (
     convert_to_numba,
     get_n_cores,
     check_layer_edge_dict,
-    save_to_file
+    save_to_parquet
 ) 
 from src.walks_numba import create_walks as create_walks_numba
 from src.walks import  create_walks_starting_from_layers
@@ -102,6 +102,14 @@ async def main():
     logger.info("Creating walks")
     result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
     
+    logger.info("Concatenating walks")
+    result_array = np.vstack(result)
+    #result_array = np.array(result) # is it faster to concatenate np arrays? we could already create np arrays in the create_walks function?
+    #n_rows = len(users) * N_WALKS
+    #result_array = result_array.reshape(n_rows, 1 + 2*WALK_LEN)
+
+    logger.info("creating additional walks")
+    # TODO: use numba 
     additional_walks = create_walks_starting_from_layers(
             layer_id_set=layer_id_set,
             users=users,
@@ -113,14 +121,17 @@ async def main():
     required_length = len(result[0][0])
     additional_walks = [x[:required_length] for x in additional_walks]
 
-    result.append(additional_walks)
+    additional_walks = np.array(additional_walks)
+
+    logger.info("Concatenating arrays")
+    result = np.vstack([result_array, additional_walks])
 
     logger.info("Saving")
     filename = DATA_DIR["output"] + DEST + "_" + str(YEAR)
     if DRY_RUN:
         filename += "_dry"
 
-    save_to_file(result, filename, "parquet")
+    save_to_parquet(result, filename)
     logger.info("Done.")
 
 

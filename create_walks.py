@@ -94,6 +94,12 @@ async def main():
         return create_walks_numba(users, WALK_LEN, layer_edge_dict_numba, JUMP_PROB)
 
     _ = walks_wrapper(users_numba[:10])
+    _ = create_walks_starting_from_layers(
+            layer_id_set=layer_id_set,
+            nodes=users_numba,
+            walk_len=WALK_LEN,
+            layer_edge_dict=layer_edge_dict_numba,
+            p=0.3)
 
     async def create_walks_parallel(users, n_workers):
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
@@ -116,11 +122,9 @@ async def main():
                 layer_id_set=layer_id_set,
                 nodes=users_numba,
                 walk_len=WALK_LEN,
-                n_walks=1,
                 layer_edge_dict=layer_edge_dict_numba,
                 p=JUMP_PROB
                 ) 
-        additional_walks = np.array(additional_walks)
 
         logger.info("Concatenating arrays")
         result_array = np.vstack([result_array, additional_walks])

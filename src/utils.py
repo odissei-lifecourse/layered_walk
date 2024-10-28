@@ -204,7 +204,9 @@ def save_to_parquet(
     dry_indicator = "dry=0"
     if dry_run:
         dry_indicator = "dry=1"
-    save_dir = Path(*[data_dir, str(year), iteration_name, dry_indicator])
+    
+    year_level = f"year={year:04d}"
+    save_dir = Path(*[data_dir, year_level, iteration_name, dry_indicator])
 
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / file_name

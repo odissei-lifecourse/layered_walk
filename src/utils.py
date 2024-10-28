@@ -213,12 +213,13 @@ def save_to_parquet(
     
     file_name = f"chunk-{chunk_id}.parquet"
     
-    dry_indicator = "dry=0"
+    dry_partition = "dry=0"
     if dry_run:
-        dry_indicator = "dry=1"
+        dry_partition = "dry=1"
     
-    year_level = f"year={year:04d}"
-    save_dir = Path(*[data_dir, year_level, iteration_name, dry_indicator])
+    year_partition = f"year={year:04d}"
+    iteration_partition = f"iter_name={iteration_name}"
+    save_dir = Path(*[data_dir, year_partition, iteration_partition, dry_partition])
 
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / file_name

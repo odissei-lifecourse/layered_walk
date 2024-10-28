@@ -99,21 +99,19 @@ async def main():
         return result 
     
 
+    users_input = users_numba
+    if LOCATION == "snellius" and not DRY_RUN:
+        logger.info("Inflating the work by factor 16")
+        users_input = np.tile(users_input, 16) 
+    
     for i in tqdm(range(N_WALKS), desc="Creating walks"):
-        users_input = users_numba
-
-        if LOCATION == "snellius" and not DRY_RUN:
-            logger.info("Inflating the work by factor 16")
-            users_input = np.tile(users_input, 16) 
-
         result = await create_walks_parallel(users_input, N_WORKERS)
         
-        logger.info("Concatenating walks")
+        logger.debug("Concatenating walks")
         result_array = np.vstack(result)
 
         logger.info("creating additional walks")
         # TODO: use numba 
-        # TODO: create the right length already inside the function 
         additional_walks = create_walks_starting_from_layers(
                 layer_id_set=layer_id_set,
                 users=users,
@@ -127,7 +125,7 @@ async def main():
         logger.info("Concatenating arrays")
         result_array = np.vstack([result_array, additional_walks])
 
-        logger.info("Saving")
+        logger.debug("Saving")
         filename = DATA_DIR["output"] + DEST + "_" + str(YEAR) + "_" + str(i)
         if DRY_RUN:
             filename += "_dry"

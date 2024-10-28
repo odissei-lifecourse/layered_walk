@@ -33,6 +33,8 @@ def create_walks(
             p
         )
         result.append(res)
+
+    return convert_nested_list_to_array(result)
     
     #return result 
     
@@ -45,15 +47,28 @@ def create_walks(
     # than concatenating the result in the main process
     # see github discussion. 
     # TODO: put into a separate function
-    A = result[0]
-    a = np.empty((len(result), len(A)), dtype=A._dtype)
-    for i, v in enumerate(result):
+    #A = result[0]
+    #a = np.empty((len(result), len(A)), dtype=A._dtype)
+    #for i, v in enumerate(result):
+    #    temp_arr = np.empty(len(v), dtype=v._dtype)
+    #    for j, w in enumerate(v):
+    #        temp_arr[j] = w
+    #    a[i] = temp_arr
+    #return a
+
+
+@numba.njit(nogil=True)
+def convert_nested_list_to_array(nested_list):
+    """Convert a nested numba list to a numpy array"""
+    first_element = nested_list[0]
+    output = np.empty((len(nested_list), len(first_element)), dtype=first_element._dtype)
+    for i, v in enumerate(nested_list):
         temp_arr = np.empty(len(v), dtype=v._dtype)
         for j, w in enumerate(v):
             temp_arr[j] = w
-        a[i] = temp_arr
-    return a
+        output[i] = temp_arr
 
+    return output
 
 
 
@@ -120,7 +135,6 @@ def create_walks_starting_from_layers(
         layer_id_set: np.ndarray,
         nodes: numba.int64[:],
         walk_len: int, 
-        n_walks: int,
         layer_edge_dict: numba.typed.Dict,
         p: float=0.8):
     """"Create one walk for each unique layer identifier.
@@ -139,8 +153,8 @@ def create_walks_starting_from_layers(
         list: a list of walks, one starting from each of the layer identifiers.
     """
 
-    walks = []
-    for current_layer in np.tile(list(layer_id_set), n_walks):
+    walks = List() 
+    for current_layer in layer_id_set:
         np.random.shuffle(nodes)
         start_node = None
         
@@ -154,18 +168,20 @@ def create_walks_starting_from_layers(
             raise RuntimeError(msg)
         
         # invoke the walk function here with walk_len; crop at the end
-        regular_walk = single_walk(
+        walk = single_walk(
                 start_node=start_node, 
                 walk_len=walk_len,
                 layer_edge_dict=layer_edge_dict,
                 start_layer=current_layer,
                 p=p)
-        walk = [current_layer] + regular_walk
+
+        walk.insert(0, current_layer)
+        
         expected_length = 1 + 2*walk_len
         walk = walk[:expected_length]
         walks.append(walk)
     
-    return walks
+    return convert_nested_list_to_array(walks)
 
 
 

@@ -81,7 +81,7 @@ def single_walk(start_node: types.int64,
                 walk_len: int, 
                 layer_edge_dict: numba.typed.Dict,
                 start_layer: int | None=None,
-                p: float=0.8) -> numba.List:
+                p: float=0.8) -> numba.typed.List:
     """Create a single random walk starting at one node.
     
     Args:

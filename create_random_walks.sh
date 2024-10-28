@@ -20,5 +20,5 @@ python create_walks.py \
     --year 2010 \
     --n_walks 5 \
     --walk_len 10 \
-    --dest layered_walks \
+    --iteration_name first_trial \
     --dry-run

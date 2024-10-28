@@ -10,12 +10,11 @@ from pathlib import Path
 from tqdm import tqdm
 import warnings
 import os 
-import csv 
 
 import pyarrow as pa 
 import pyarrow.parquet as pq
 
-
+from pathlib import Path
 
 
 
@@ -177,8 +176,18 @@ def check_layer_edge_dict(layer_edge_dict: Dict):
 
 
 
-def save_to_parquet(data: np.ndarray, filename: str) -> None:
-    """Save a list of list to parquet."""
+def save_to_parquet(
+        data: np.ndarray, 
+        data_dir: str,
+        year: int,
+        iteration_name: str,
+        chunk_id: int,
+        dry_run: bool) -> None:
+    """Save an array to parquet.
+    
+    Args:
+        data_dir: the root of the directory for all walks.
+    """
 
     n_cols = data.shape[1]
     source_col = ["SOURCE"]
@@ -189,8 +198,18 @@ def save_to_parquet(data: np.ndarray, filename: str) -> None:
             [data[:, i] for i in range(n_cols)], 
             names=col_names
         )
+    
+    file_name = f"chunk-{chunk_id}.parquet"
+    
+    dry_indicator = "dry=0"
+    if dry_run:
+        dry_indicator = "dry=1"
+    save_dir = Path(*[data_dir, str(year), iteration_name, dry_indicator])
 
-    pq.write_table(table, filename + ".parquet")
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_path = save_dir / file_name
+    pq.write_table(table, save_path)
+
 
 
 

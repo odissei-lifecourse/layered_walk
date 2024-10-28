@@ -29,6 +29,7 @@ def create_walks(
             node, 
             walk_len,
             layer_edge_dict,
+            None,
             p
         )
         result.append(res)

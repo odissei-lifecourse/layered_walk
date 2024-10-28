@@ -183,10 +183,22 @@ def save_to_parquet(
         iteration_name: str,
         chunk_id: int,
         dry_run: bool) -> None:
-    """Save an array to parquet.
+    """Save an array to parquet with partitioning.
     
     Args:
-        data_dir: the root of the directory for all walks.
+        `data`: the data to save.
+        `data_dir`: the root of the directory for all walks.
+        `year`: the year to which the walk refers.
+        `iteration_name`: the name of the iteration that created the walks.
+        `chunk_id`: The unique identifier for a chunk, corresponding to one "epoch"
+        of walks.
+        `dry_run`: Indicator whether a dry run is used or not.
+
+    Notes:
+        - The schema is defined as follows: the first column is named `SOURCE`, the 
+        remaining columns are named `STEP_i` for i in the number of remaining columns.
+        - The function creates a partition of parquet files along `year`, `iteration_name`, 
+        and `dry`.
     """
 
     n_cols = data.shape[1]

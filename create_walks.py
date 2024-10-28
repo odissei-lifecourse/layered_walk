@@ -105,14 +105,8 @@ async def main():
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
         return result 
     
-
-    users_input = users_numba
-    if LOCATION == "snellius" and not DRY_RUN:
-        logger.info("Inflating the work by factor 16")
-        users_input = np.tile(users_input, 16) 
-    
     for i in tqdm(range(N_WALKS), desc="Creating walks"):
-        result = await create_walks_parallel(users_input, N_WORKERS)
+        result = await create_walks_parallel(users_numba, N_WORKERS)
         
         logger.debug("Concatenating walks")
         result_array = np.vstack(result)

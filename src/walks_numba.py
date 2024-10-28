@@ -22,7 +22,26 @@ def create_walks(
     walk_len: int,
     layer_edge_dict: numba.typed.Dict,
     p: float=0.8
-    ):
+    ) -> np.ndarray:
+    """Create one random walk for each node in `nodes`.
+    
+    Args:
+        `nodes`: Array of nodes identifiers from which to start a node.
+        `walk_len`: Length of each walk.
+        `layer_edge_dict`: Dictionary of adjacency dicts for each node.
+        `p`: Probability of resampling the layer.
+
+    Returns:
+        np.ndarray: A 2-dimensional array where each row is a walk starting
+        from a given node.
+
+    Notes:
+        The function calls `convert_nested_list_to_array` at the end, which has quadratic 
+        time complexity. The advantage is that the conversion is parallelized 
+        across workers, and the `for` loop in numba is very fast.
+        In practice, this has been the fastest way to collect the results and store
+        them in the parquet files.
+    """
     result = List()
     for node in nodes:
         res = single_walk(
@@ -36,30 +55,15 @@ def create_walks(
 
     return convert_nested_list_to_array(result)
     
-    #return result 
-    
-    # try converting to numpy
-    # pro: numba for loops are fast, plus it's done by the workers. plus,
-    # writing becomes very fast too.
-    # con: more memory (?); overhead operation but it's faster
-        # the memory issue should be checked in more detail: compare
-        # memory usage with this process and without (only calling the workers, not writing)
-    # than concatenating the result in the main process
-    # see github discussion. 
-    # TODO: put into a separate function
-    #A = result[0]
-    #a = np.empty((len(result), len(A)), dtype=A._dtype)
-    #for i, v in enumerate(result):
-    #    temp_arr = np.empty(len(v), dtype=v._dtype)
-    #    for j, w in enumerate(v):
-    #        temp_arr[j] = w
-    #    a[i] = temp_arr
-    #return a
-
 
 @numba.njit(nogil=True)
 def convert_nested_list_to_array(nested_list):
-    """Convert a nested numba list to a numpy array"""
+    """Convert a nested numba list to a numpy array.
+
+    Notes:
+        This function has quadratic time complexity. It is best run 
+        in parallel by multiple workers.
+    """
     first_element = nested_list[0]
     output = np.empty((len(nested_list), len(first_element)), dtype=first_element._dtype)
     for i, v in enumerate(nested_list):
@@ -77,18 +81,18 @@ def single_walk(start_node: types.int64,
                 walk_len: int, 
                 layer_edge_dict: numba.typed.Dict,
                 start_layer: int | None=None,
-                p: float=0.8):
+                p: float=0.8) -> numba.List:
     """Create a single random walk starting at one node.
     
     Args:
-        start_node: the node from which to start
-        walk_len: the length of the random walk 
-        node_layer_dict: dictionary indicating the layer indices in which each node as at least one edge.
-        layers: list of numba.typed.Dict. Each layer is an edge list, indicating the connected nodes for each node. 
-        p: probability of resampling the layer. 
+        `start_node`: the node from which to start
+        `walk_len`: the length of the random walk 
+        `layer_edge_dict`: dictionary indicating the layer indices in which each node as at least one edge.
+        `start_layer`: identifier of the first layer.
+        `p`: probability of resampling the layer. 
     
     Returns:
-        list: a sequence of node identifiers
+        numba.List: a sequence of node identifiers.
     """
    
     current_node = start_node
@@ -133,24 +137,30 @@ def single_walk(start_node: types.int64,
 @numba.njit(nogil=True)
 def create_walks_starting_from_layers(
         layer_id_set: np.ndarray,
-        nodes: numba.int64[:],
+        nodes: np.ndarray,
         walk_len: int, 
         layer_edge_dict: numba.typed.Dict,
-        p: float=0.8):
+        p: float=0.8) -> np.ndarray:
     """"Create one walk for each unique layer identifier.
 
     Args:
-        layer_id_set (np.ndarray): Array of unique layer identifiers. One walk starting from each of them
+        `layer_id_set`: Array of unique layer identifiers. One walk starting from each of them
         will be created.
-        nodes (list): List of unique node identifiers.
-        walk_len (int): length of the walk to generate.
-        n_walks (int): Number of walks to generate for each layer.
-        layer_edge_dict: Dictionary where keys are node identifiers and values are dictionaries 
+        `nodes`: List of unique node identifiers.
+        `walk_len`: length of the walk to generate.
+        `n_walks`: Number of walks to generate for each layer.
+        `layer_edge_dict`: Numba dictionary where keys are node identifiers and values are dictionaries 
         of non-empty edge lists for each layer.
-        p: probability of changing layer.
+        `p`: probability of changing layer.
 
     Returns:
-        list: a list of walks, one starting from each of the layer identifiers.
+        np.ndarray: A 2-dimensional array where each row is a walk starting from 
+        one of the layer identifiers.
+
+    Notes:
+        The function calls `single_walk` from a random draw of the nodes that are connected
+        on each layer type. The layer identifier is then inserted at position 0 of the 
+        walk.
     """
 
     walks = List() 

@@ -54,7 +54,7 @@ async def main():
     N_WALKS = args.n_walks
     WALK_LEN = args.walk_len
     YEAR = args.year
-    DEST = args.dest
+    ITER_NAME = args.iteration_name
     DEBUG = args.debug
     JUMP_PROB = 0.8
 
@@ -117,7 +117,7 @@ async def main():
         logger.debug("Concatenating walks")
         result_array = np.vstack(result)
 
-        logger.info("creating additional walks")
+        logger.debug("Creating additional walks")
         additional_walks = create_walks_starting_from_layers(
                 layer_id_set=layer_id_set,
                 nodes=users_numba,
@@ -126,15 +126,17 @@ async def main():
                 p=JUMP_PROB
                 ) 
 
-        logger.info("Concatenating arrays")
+        logger.debug("Concatenating arrays")
         result_array = np.vstack([result_array, additional_walks])
 
         logger.debug("Saving")
-        filename = DATA_DIR["output"] + DEST + "_" + str(YEAR) + "_" + str(i)
-        if DRY_RUN:
-            filename += "_dry"
-
-        save_to_parquet(result_array, filename)
+        save_to_parquet(
+                data=result_array,
+                data_dir=DATA_DIR["output"],
+                year=YEAR,
+                iteration_name=ITER_NAME,
+                chunk_id=i,
+                dry_run=DRY_RUN)
 
 
     logger.info("Done.")

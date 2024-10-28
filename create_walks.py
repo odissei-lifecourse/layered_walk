@@ -35,7 +35,7 @@ def parse_args():
         action=argparse.BooleanOptionalAction
         )  
     parser.add_argument("--location", help="Snellius or local machine", choices=LOCATION_CHOICES)
-    parser.add_argument("--dest", help="Destination of csv file, relative to data_dir. year will be appended to the end.", type=str)
+    parser.add_argument("--iteration_name", help="Destination of csv file, relative to data_dir. year will be appended to the end.", type=str)
     parser.add_argument("--n_walks", help="Number of walks per node", type=int, default=5)
     parser.add_argument("--walk_len", help="Length of walks to generate", type=int, default=50)
     parser.add_argument("--year", help="Which year of the network data to use", type=int, default=2010)

@@ -13,7 +13,7 @@ from src.utils import (
     save_to_parquet
 ) 
 from src.walks_numba import create_walks as create_walks_numba
-from src.walks import  create_walks_starting_from_layers
+from src.walks_numba import  create_walks_starting_from_layers
 from config import data_dir
 from tqdm import tqdm
 
@@ -77,6 +77,7 @@ async def main():
     users, layer_edge_dict, layer_id_set = load_data(
         DATA_DIR["input"], YEAR, connected_node_file, layers_to_load, sample_size 
     )
+    layer_id_set = np.array(list(layer_id_set))
     
     if DEBUG:
         check_layer_edge_dict(layer_edge_dict)
@@ -111,13 +112,12 @@ async def main():
         result_array = np.vstack(result)
 
         logger.info("creating additional walks")
-        # TODO: use numba 
         additional_walks = create_walks_starting_from_layers(
                 layer_id_set=layer_id_set,
-                users=users,
+                nodes=users_numba,
                 walk_len=WALK_LEN,
                 n_walks=1,
-                layer_edge_dict=layer_edge_dict,
+                layer_edge_dict=layer_edge_dict_numba,
                 p=JUMP_PROB
                 ) 
         additional_walks = np.array(additional_walks)

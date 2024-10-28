@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-#SBATCH --job-name=create_random_walks
+#SBATCH --job-name=lyr_wlk
 #SBATCH --ntasks 1
-#SBATCH --cpus-per-task 16
+#SBATCH --cpus-per-task 32
 #SBATCH --nodes=1
 #SBATCH --time=00:30:00
-#SBATCH --mem=20G
-#SBATCH -p fat_rome
+#SBATCH --mem=30G
+#SBATCH -p rome
 #SBATCH -e %x-%j.err
 #SBATCH -o %x-%j.out
 
@@ -15,10 +15,10 @@ cd /home/flavio/repositories/layered_walk
 source 2023_snel_modules.sh
 source .venv/bin/activate 
 
+export NUMEXPR_MAX_THREADS=32
 python create_walks.py \
     --location snellius \
     --year 2010 \
-    --n_walks 5 \
-    --walk_len 10 \
-    --iteration_name first_trial \
-    --dry-run
+    --n_walks 4 \
+    --walk_len 15 \
+    --iteration_name first_trial --dry-run

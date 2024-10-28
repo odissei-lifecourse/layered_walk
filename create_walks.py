@@ -15,7 +15,7 @@ from src.utils import (
 from src.walks_numba import create_walks as create_walks_numba
 from src.walks import  create_walks_starting_from_layers
 from config import data_dir
-
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -99,39 +99,42 @@ async def main():
         return result 
     
 
-    logger.info("Creating walks")
-    result = await create_walks_parallel(np.tile(users_numba, N_WALKS), N_WORKERS)
-    
-    logger.info("Concatenating walks")
-    result_array = np.vstack(result)
-    #result_array = np.array(result) # is it faster to concatenate np arrays? we could already create np arrays in the create_walks function?
-    #n_rows = len(users) * N_WALKS
-    #result_array = result_array.reshape(n_rows, 1 + 2*WALK_LEN)
+    for i in tqdm(range(N_WALKS), desc="Creating walks"):
+        users_input = users_numba
 
-    logger.info("creating additional walks")
-    # TODO: use numba 
-    additional_walks = create_walks_starting_from_layers(
-            layer_id_set=layer_id_set,
-            users=users,
-            walk_len=WALK_LEN,
-            n_walks=N_WALKS,
-            layer_edge_dict=layer_edge_dict,
-            p=JUMP_PROB
-            ) 
-    required_length = len(result[0][0])
-    additional_walks = [x[:required_length] for x in additional_walks]
+        if LOCATION == "snellius" and not DRY_RUN:
+            logger.info("Inflating the work by factor 16")
+            users_input = np.tile(users_input, 16) 
 
-    additional_walks = np.array(additional_walks)
+        result = await create_walks_parallel(users_input, N_WORKERS)
+        
+        logger.info("Concatenating walks")
+        result_array = np.vstack(result)
 
-    logger.info("Concatenating arrays")
-    result = np.vstack([result_array, additional_walks])
+        logger.info("creating additional walks")
+        # TODO: use numba 
+        # TODO: create the right length already inside the function 
+        additional_walks = create_walks_starting_from_layers(
+                layer_id_set=layer_id_set,
+                users=users,
+                walk_len=WALK_LEN,
+                n_walks=1,
+                layer_edge_dict=layer_edge_dict,
+                p=JUMP_PROB
+                ) 
+        additional_walks = np.array(additional_walks)
 
-    logger.info("Saving")
-    filename = DATA_DIR["output"] + DEST + "_" + str(YEAR)
-    if DRY_RUN:
-        filename += "_dry"
+        logger.info("Concatenating arrays")
+        result_array = np.vstack([result_array, additional_walks])
 
-    save_to_parquet(result, filename)
+        logger.info("Saving")
+        filename = DATA_DIR["output"] + DEST + "_" + str(YEAR) + "_" + str(i)
+        if DRY_RUN:
+            filename += "_dry"
+
+        save_to_parquet(result_array, filename)
+
+
     logger.info("Done.")
 
 

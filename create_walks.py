@@ -73,7 +73,7 @@ async def main():
         sample_size = SAMPLE_SIZE_DRY_RUN
 
     logger.info("Loading data")    
-    connected_node_file = "connected_user_set" if LOCATION == "ossc" else None
+    connected_node_file = "person_sets/connected_person_set" if LOCATION == "ossc" else None
     users, layer_edge_dict, layer_id_set = load_data(
         DATA_DIR["input"], YEAR, connected_node_file, layers_to_load, sample_size 
     )

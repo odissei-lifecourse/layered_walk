@@ -43,7 +43,7 @@ def load_data(data_dir,
             1. list of int: Unique user IDs in the network.
             2. dict: A nested dictionary structure where:
                 - The outer key is a user ID.
-                - The inner key is a layer ID (maximum user ID + offset + original layer ID).
+                - The inner key is a layer ID (maximum user ID + 1 + original layer ID).
                 - The inner value is a list of connected user IDs for that user in that layer.
             3. set of int: Set of all layer IDs used in the data structure.
 
@@ -54,7 +54,7 @@ def load_data(data_dir,
     Notes:
         - The function loads data from pickle files for each specified layer.
         - It processes the data to create a unified structure across all layers.
-        - Layer IDs are assigned by adding an offset to the maximum user ID.
+        - Layer IDs are assigned values that start at 1+maximum user ID.
         - If sampling is requested, it's performed on the final set of unique users.
     """
 

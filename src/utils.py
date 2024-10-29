@@ -74,7 +74,7 @@ def load_data(data_dir,
 
     layers = []
     for ltype in tqdm(layer_types, desc="Loading layers"):
-        with Path(data_dir + ltype + "_" + str(year) + "_adjacency_dict.pkl").open("rb") as pkl_file:
+        with Path(data_dir + "/adjacency_dicts/" + ltype + "_" + str(year) + "_adjacency_dict.pkl").open("rb") as pkl_file:
             edges = dict(pickle.load(pkl_file))
 
             if not connected_node_file and ltype == "family":

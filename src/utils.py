@@ -60,7 +60,6 @@ def load_data(data_dir,
 
 
     VALID_LAYERS = ["family", "colleague", "classmate", "neighbor", "household"]
-    OFFSET = 5
 
     if not all([layer in VALID_LAYERS for layer in layer_types]):
         raise ValueError("Invalid layers selected.")
@@ -90,7 +89,7 @@ def load_data(data_dir,
     for user in tqdm(unique_users, desc="Creating layer_edge_dict"):
         dict_current_user = {}
         for idx, layer in enumerate(layers):
-            layer_id = max_user_id + OFFSET + idx
+            layer_id = max_user_id + 1 + idx
             if user in layer:
                 if len(layer[user]) > 0:
                     dict_current_user[layer_id] = layer[user]

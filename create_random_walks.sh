@@ -23,3 +23,12 @@ python create_walks.py \
     --walk_len 20 \
     --iteration_name first_trial \
     --no-record_edge_types
+
+python create_walks.py \
+    --location snellius \
+    --year 2010 \
+    --n_walks 4 \
+    --walk_len 40 \
+    --iteration_name first_trial \
+    --record_edge_types
+

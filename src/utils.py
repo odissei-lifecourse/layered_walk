@@ -218,7 +218,11 @@ def save_to_parquet(
     if dry_run:
         dry_partition = "dry=1"
 
-    edge_record_partition = "edge_type=0" if not record_edge_types else "edge_type=1"
+    edge_record_partition = "record_edge_type="
+    if record_edge_types:
+        edge_record_partition += "1"
+    else:
+        edge_record_partition += "0"
     
     year_partition = f"year={year:04d}"
     iteration_partition = f"iter_name={iteration_name}"

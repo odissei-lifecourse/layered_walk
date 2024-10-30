@@ -16,7 +16,7 @@ config_dict = {
 
 data_dir = {
     "snellius": {
-        "input": "/projects/0/prjs1019/data/graph/processed/",
+        "input": "/projects/0/prjs1019/data/graph/",
         "output": "/projects/0/prjs1019/data/graph/walks/"
     } ,
     "local": {

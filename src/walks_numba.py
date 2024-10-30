@@ -21,7 +21,8 @@ def create_walks(
     nodes: numba.int64[:],
     walk_len: int,
     layer_edge_dict: numba.typed.Dict,
-    p: float=0.8
+    p: float=0.8,
+    record_edge_types: bool=True
     ) -> np.ndarray:
     """Create one random walk for each node in `nodes`.
     
@@ -30,6 +31,9 @@ def create_walks(
         `walk_len`: Length of each walk.
         `layer_edge_dict`: Dictionary of adjacency dicts for each node.
         `p`: Probability of resampling the layer.
+        `record_edge_types`: If True, the edge IDs of how two nodes are 
+        connected is recorded in the walk. This leads to an effective walk
+        length of `1 + 2*walk_len` as opposed to `1 + walk_len`. 
 
     Returns:
         np.ndarray: A 2-dimensional array where each row is a walk starting
@@ -49,7 +53,8 @@ def create_walks(
             walk_len,
             layer_edge_dict,
             None,
-            p
+            p,
+            record_edge_types
         )
         result.append(res)
 
@@ -81,7 +86,8 @@ def single_walk(start_node: types.int64,
                 walk_len: int, 
                 layer_edge_dict: numba.typed.Dict,
                 start_layer: int | None=None,
-                p: float=0.8) -> numba.typed.List:
+                p: float=0.8,
+                record_edge_types: bool=True) -> numba.typed.List:
     """Create a single random walk starting at one node.
     
     Args:
@@ -90,6 +96,8 @@ def single_walk(start_node: types.int64,
         `layer_edge_dict`: dictionary indicating the layer indices in which each node as at least one edge.
         `start_layer`: identifier of the first layer.
         `p`: probability of resampling the layer. 
+        `record_edge_types`: If True, the edge type IDs are recorded between
+        two connected nodes.
     
     Returns:
         numba.List: a sequence of node identifiers.
@@ -103,12 +111,12 @@ def single_walk(start_node: types.int64,
     if start_layer is None:
         layer_indices = np.array(list(layer_edge_dict[current_node].keys()))
         layer_index = custom_sample(layer_indices)
+        if layer_index == -1:
+            msg = f"Invalid layer index for node {current_node} with layer indices {layer_indices}" 
+            raise ValueError(msg)
     else:
         layer_index = start_layer
 
-    if layer_index == -1:
-        msg = f"Invalid layer index for node {current_node} with layer indices {layer_indices}" 
-        raise ValueError(msg)
     
   
     for draw in np.random.rand(walk_len):
@@ -122,7 +130,9 @@ def single_walk(start_node: types.int64,
 
         adjacent_nodes = layer_edge_dict[current_node][layer_index]
 
-        walk.append(layer_index) # the first node is indicated by 0
+        if record_edge_types: 
+            walk.append(layer_index) # the first node is indicated by 0
+
         next_node = custom_sample(adjacent_nodes)
         if next_node == -1:
             msg = f"Invalid next_node from adjacent nodes {adjacent_nodes} of current node {current_node} in layer_index {layer_index}"

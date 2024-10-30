@@ -41,6 +41,9 @@ def parse_args():
     parser.add_argument("--year", help="Which year of the network data to use", type=int, default=2010)
     parser.add_argument("--debug", help="Debugging. Do additional checks.", 
             default=False, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--record_edge_types", default=True, 
+                        action=argparse.BooleanOptionalAction,
+                        help="If True, records the edge types along the walk.")
     return parser.parse_args()
 
 
@@ -91,15 +94,16 @@ async def main():
     N_WORKERS = get_n_cores(DRY_RUN)
 
     def walks_wrapper(users):
-        return create_walks_numba(users, WALK_LEN, layer_edge_dict_numba, JUMP_PROB)
+        return create_walks_numba(users, WALK_LEN, layer_edge_dict_numba, JUMP_PROB, args.record_edge_types)
 
     _ = walks_wrapper(users_numba[:10])
-    _ = create_walks_starting_from_layers(
-            layer_id_set=layer_id_set,
-            nodes=users_numba,
-            walk_len=WALK_LEN,
-            layer_edge_dict=layer_edge_dict_numba,
-            p=0.3)
+    if args.record_edge_types:
+        _ = create_walks_starting_from_layers(
+                layer_id_set=layer_id_set,
+                nodes=users_numba,
+                walk_len=WALK_LEN,
+                layer_edge_dict=layer_edge_dict_numba,
+                p=0.3)
 
     async def create_walks_parallel(users, n_workers):
         result = await asyncio.gather(*(asyncio.to_thread(walks_wrapper, batch) for batch in batched(users, len(users)//n_workers)))
@@ -111,17 +115,18 @@ async def main():
         logger.debug("Concatenating walks")
         result_array = np.vstack(result)
 
-        logger.debug("Creating additional walks")
-        additional_walks = create_walks_starting_from_layers(
-                layer_id_set=layer_id_set,
-                nodes=users_numba,
-                walk_len=WALK_LEN,
-                layer_edge_dict=layer_edge_dict_numba,
-                p=JUMP_PROB
-                ) 
+        if args.record_edge_types:
+            logger.debug("Creating additional walks")
+            additional_walks = create_walks_starting_from_layers(
+                    layer_id_set=layer_id_set,
+                    nodes=users_numba,
+                    walk_len=WALK_LEN,
+                    layer_edge_dict=layer_edge_dict_numba,
+                    p=JUMP_PROB
+                    ) 
 
-        logger.debug("Concatenating arrays")
-        result_array = np.vstack([result_array, additional_walks])
+            logger.debug("Concatenating arrays")
+            result_array = np.vstack([result_array, additional_walks])
 
         logger.debug("Saving")
         save_to_parquet(

@@ -20,5 +20,6 @@ python create_walks.py \
     --location snellius \
     --year 2010 \
     --n_walks 4 \
-    --walk_len 15 \
-    --iteration_name first_trial --dry-run
+    --walk_len 20 \
+    --iteration_name first_trial \
+    --no-record_edge_types

@@ -135,7 +135,8 @@ async def main():
                 year=YEAR,
                 iteration_name=ITER_NAME,
                 chunk_id=i,
-                dry_run=DRY_RUN)
+                dry_run=DRY_RUN,
+                record_edge_types=args.record_edge_types)
 
 
     logger.info("Done.")

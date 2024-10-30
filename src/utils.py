@@ -181,7 +181,8 @@ def save_to_parquet(
         year: int,
         iteration_name: str,
         chunk_id: int,
-        dry_run: bool) -> None:
+        dry_run: bool,
+        record_edge_types: bool) -> None:
     """Save an array to parquet with partitioning.
     
     Args:
@@ -192,6 +193,7 @@ def save_to_parquet(
         `chunk_id`: The unique identifier for a chunk, corresponding to one "epoch"
         of walks.
         `dry_run`: Indicator whether a dry run is used or not.
+        `record_edge_types`: Indicator whether edge types are recorded or not. 
 
     Notes:
         - The schema is defined as follows: the first column is named `SOURCE`, the 
@@ -215,10 +217,12 @@ def save_to_parquet(
     dry_partition = "dry=0"
     if dry_run:
         dry_partition = "dry=1"
+
+    edge_record_partition = "edge_type=0" if not record_edge_types else "edge_type=1"
     
     year_partition = f"year={year:04d}"
     iteration_partition = f"iter_name={iteration_name}"
-    save_dir = Path(*[data_dir, year_partition, iteration_partition, dry_partition])
+    save_dir = Path(*[data_dir, year_partition, iteration_partition, edge_record_partition, dry_partition])
 
     save_dir.mkdir(parents=True, exist_ok=True)
     save_path = save_dir / file_name

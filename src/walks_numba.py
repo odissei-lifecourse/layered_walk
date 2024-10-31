@@ -40,11 +40,15 @@ def create_walks(
         from a given node.
 
     Notes:
-        The function calls `convert_nested_list_to_array` at the end, which has quadratic 
+        - The function calls `convert_nested_list_to_array` at the end, which has quadratic 
         time complexity. The advantage is that the conversion is parallelized 
         across workers, and the `for` loop in numba is very fast.
         In practice, this has been the fastest way to collect the results and store
         them in the parquet files.
+        - If the input graph has undirected edges, the generated walks will have a 
+        higher effective rate of resampling the layer than what is specified in `p`. 
+        This is because layers are also resampled when the current node does not 
+        have any outgoing edges in the current layer. 
     """
     result = List()
     for node in nodes:

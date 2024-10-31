@@ -27,11 +27,11 @@ def create_walks(
     """Create one random walk for each node in `nodes`.
     
     Args:
-        `nodes`: Array of nodes identifiers from which to start a node.
-        `walk_len`: Length of each walk.
-        `layer_edge_dict`: Dictionary of adjacency dicts for each node.
-        `p`: Probability of resampling the layer.
-        `record_edge_types`: If True, the edge IDs of how two nodes are 
+        nodes: Array of nodes identifiers from which to start a node.
+        walk_len: Length of each walk.
+        layer_edge_dict: Dictionary of adjacency dicts for each node.
+        p: Probability of resampling the layer.
+        record_edge_types: If True, the edge IDs of how two nodes are 
         connected is recorded in the walk. This leads to an effective walk
         length of `1 + 2*walk_len` as opposed to `1 + walk_len`. 
 
@@ -91,12 +91,12 @@ def single_walk(start_node: types.int64,
     """Create a single random walk starting at one node.
     
     Args:
-        `start_node`: the node from which to start
-        `walk_len`: the length of the random walk 
-        `layer_edge_dict`: dictionary indicating the layer indices in which each node as at least one edge.
-        `start_layer`: identifier of the first layer.
-        `p`: probability of resampling the layer. 
-        `record_edge_types`: If True, the edge type IDs are recorded between
+        start_node: the node from which to start
+        walk_len: the length of the random walk 
+        layer_edge_dict: dictionary indicating the layer indices in which each node as at least one edge.
+        start_layer: identifier of the first layer.
+        p: probability of resampling the layer. 
+        record_edge_types: If True, the edge type IDs are recorded between
         two connected nodes.
     
     Returns:
@@ -154,14 +154,14 @@ def create_walks_starting_from_layers(
     """"Create one walk for each unique layer identifier.
 
     Args:
-        `layer_id_set`: Array of unique layer identifiers. One walk starting from each of them
+        layer_id_set: Array of unique layer identifiers. One walk starting from each of them
         will be created.
-        `nodes`: List of unique node identifiers.
-        `walk_len`: length of the walk to generate.
-        `n_walks`: Number of walks to generate for each layer.
-        `layer_edge_dict`: Numba dictionary where keys are node identifiers and values are dictionaries 
+        nodes: List of unique node identifiers.
+        walk_len: length of the walk to generate.
+        n_walks: Number of walks to generate for each layer.
+        layer_edge_dict: Numba dictionary where keys are node identifiers and values are dictionaries 
         of non-empty edge lists for each layer.
-        `p`: probability of changing layer.
+        p: probability of changing layer.
 
     Returns:
         np.ndarray: A 2-dimensional array where each row is a walk starting from 

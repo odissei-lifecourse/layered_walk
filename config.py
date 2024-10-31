@@ -16,7 +16,7 @@ config_dict = {
 
 data_dir = {
     "snellius": {
-        "input": "/projects/0/prjs1019/data/graph/processed/",
+        "input": "/projects/0/prjs1019/data/graph/",
         "output": "/projects/0/prjs1019/data/graph/walks/"
     } ,
     "local": {
@@ -24,7 +24,7 @@ data_dir = {
         "output": "/home/flavio/datasets/synthetic_layered_graph_1mil/output"
     },
     "ossc": {
-        "input": "/gpfs/ostor/ossc9424/homedir/Dakota_network/intermediates/",
-        "output": "/gpfs/ostor/ossc9424/homedir/Dakota_network/random_walks/",
+        "input": "/gpfs/ostor/ossc9424/homedir/data/graph/",
+        "output": "/gpfs/ostor/ossc9424/homedir/data/graph/walks/",
     }
 }

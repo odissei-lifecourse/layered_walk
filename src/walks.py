@@ -17,18 +17,18 @@ def single_walk(start_node: int,
                 walk_len: int, 
                 layer_edge_dict: dict,
                 start_layer: int | None=None,
-                p: float=0.8):
+                p: float=0.8) -> list:
     """Create a single random walk starting at one node.
     
     Args:
-        start_node: the node from which to start
-        walk_len: the length of the random walk 
+        start_node: the node from which to start.
+        walk_len: the length of the random walk.
         layer_edge_dict: dictionary where keys are node identifiers and values are layer-specific
         edge list, stored in a dict with {layer id: [connected nodes]}.
         p: probability of resampling the layer. 
     
     Returns:
-        list: a sequence of node identifiers
+        list: a sequence of node identifiers.
     """
     current_node = start_node
     walk = [start_node]
@@ -129,6 +129,8 @@ def create_walks_starting_from_layers(
                 start_layer=current_layer,
                 p=p)
         walk = [current_layer] + regular_walk
+        expected_length = 1 + 2*walk_len
+        walk = walk[:expected_length]
         walks.append(walk)
     
     return walks

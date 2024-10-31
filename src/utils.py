@@ -10,12 +10,11 @@ from pathlib import Path
 from tqdm import tqdm
 import warnings
 import os 
-import csv 
 
 import pyarrow as pa 
 import pyarrow.parquet as pq
 
-
+from pathlib import Path
 
 
 
@@ -44,7 +43,7 @@ def load_data(data_dir,
             1. list of int: Unique user IDs in the network.
             2. dict: A nested dictionary structure where:
                 - The outer key is a user ID.
-                - The inner key is a layer ID (maximum user ID + offset + original layer ID).
+                - The inner key is a layer ID (maximum user ID + 1 + original layer ID).
                 - The inner value is a list of connected user IDs for that user in that layer.
             3. set of int: Set of all layer IDs used in the data structure.
 
@@ -55,13 +54,12 @@ def load_data(data_dir,
     Notes:
         - The function loads data from pickle files for each specified layer.
         - It processes the data to create a unified structure across all layers.
-        - Layer IDs are assigned by adding an offset to the maximum user ID.
+        - Layer IDs are assigned values that start at 1+maximum user ID.
         - If sampling is requested, it's performed on the final set of unique users.
     """
 
 
     VALID_LAYERS = ["family", "colleague", "classmate", "neighbor", "household"]
-    OFFSET = 5
 
     if not all([layer in VALID_LAYERS for layer in layer_types]):
         raise ValueError("Invalid layers selected.")
@@ -76,7 +74,7 @@ def load_data(data_dir,
 
     layers = []
     for ltype in tqdm(layer_types, desc="Loading layers"):
-        with Path(data_dir + ltype + "_" + str(year) + "_adjacency_dict.pkl").open("rb") as pkl_file:
+        with Path(data_dir + "/adjacency_dicts/" + ltype + "_" + str(year) + "_adjacency_dict.pkl").open("rb") as pkl_file:
             edges = dict(pickle.load(pkl_file))
 
             if not connected_node_file and ltype == "family":
@@ -91,7 +89,7 @@ def load_data(data_dir,
     for user in tqdm(unique_users, desc="Creating layer_edge_dict"):
         dict_current_user = {}
         for idx, layer in enumerate(layers):
-            layer_id = max_user_id + OFFSET + idx
+            layer_id = max_user_id + 1 + idx
             if user in layer:
                 if len(layer[user]) > 0:
                     dict_current_user[layer_id] = layer[user]
@@ -177,45 +175,62 @@ def check_layer_edge_dict(layer_edge_dict: Dict):
 
 
 
-def save_to_file(data: list[list], filename: str, format="parquet") -> None:
-    """Save a list of list to parquet or csv."""
-    BATCH_SIZE_PARQUET = 100_000
-    sample_walk = data[0][0]
-    sample_walk_len = len(sample_walk)
+def save_to_parquet(
+        data: np.ndarray, 
+        data_dir: str,
+        year: int,
+        iteration_name: str,
+        chunk_id: int,
+        dry_run: bool,
+        record_edge_types: bool) -> None:
+    """Save an array to parquet with partitioning.
+    
+    Args:
+        `data`: the data to save.
+        `data_dir`: the root of the directory for all walks.
+        `year`: the year to which the walk refers.
+        `iteration_name`: the name of the iteration that created the walks.
+        `chunk_id`: The unique identifier for a chunk, corresponding to one "epoch"
+        of walks.
+        `dry_run`: Indicator whether a dry run is used or not.
+        `record_edge_types`: Indicator whether edge types are recorded or not. 
 
-    if format == "csv":
-        with Path(filename + ".csv").open("w") as csv_file:
-            writer = csv.writer(csv_file, delimiter=",")
-            header_row = ["SOURCE"] + ["STEP_" + str(i) for i in range(sample_walk_len-1)]
-            writer.writerow(header_row)
-            for result_list in tqdm(data, desc="Writing csv"):
-                writer.writerows(result_list)
+    Notes:
+        - The schema is defined as follows: the first column is named `SOURCE`, the 
+        remaining columns are named `STEP_i` for i in the number of remaining columns.
+        - The function creates a partition of parquet files along `year`, `iteration_name`, 
+        and `dry`.
+    """
 
+    n_cols = data.shape[1]
+    source_col = ["SOURCE"]
+    walk_cols = [f"STEP_{i}" for i in range(n_cols-1)]
+    col_names = source_col + walk_cols
+
+    table = pa.Table.from_arrays(
+            [data[:, i] for i in range(n_cols)], 
+            names=col_names
+        )
+    
+    file_name = f"chunk-{chunk_id}.parquet"
+    
+    dry_partition = "dry=0"
+    if dry_run:
+        dry_partition = "dry=1"
+
+    edge_record_partition = "record_edge_type="
+    if record_edge_types:
+        edge_record_partition += "1"
     else:
-        field_col0 = [pa.field("SOURCE", pa.int64())] 
-        other_fields = [pa.field(f"STEP_{i}", pa.int64()) for i in range(sample_walk_len - 1)]
-        fields = field_col0 + other_fields
-        schema = pa.schema(fields)
+        edge_record_partition += "0"
+    
+    year_partition = f"year={year:04d}"
+    iteration_partition = f"iter_name={iteration_name}"
+    save_dir = Path(*[data_dir, year_partition, iteration_partition, edge_record_partition, dry_partition])
 
-        def data_generator():
-            for result_list in data:
-                for result in result_list:
-                    yield {"SOURCE": result[0], **{f"STEP_{i}": step for i, step in enumerate(result[1:])}}
-        
-        n_iterations = sample_walk_len * len(data)
-        with pq.ParquetWriter(filename + ".parquet", schema) as writer:
-            batch = []
-            for row in tqdm(data_generator(), desc="Writing to parquet", total=n_iterations):
-                batch.append(row)
-                if len(batch) >= BATCH_SIZE_PARQUET:
-                    table = pa.Table.from_pylist(batch, schema=schema)
-                    writer.write_table(table)
-                    batch.clear()
-
-            if batch:
-                table = pa.Table.from_pylist(batch, schema=schema)
-                writer.write_table(table)
-
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_path = save_dir / file_name
+    pq.write_table(table, save_path)
 
 
 

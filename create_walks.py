@@ -44,6 +44,8 @@ def parse_args():
     parser.add_argument("--record_edge_types", default=True, 
                         action=argparse.BooleanOptionalAction,
                         help="If True, records the edge types along the walk.")
+    parser.add_argument("--prob_resample", type=float, default=0.8,
+                        help="Probability of resampling layer types at each node.")
     return parser.parse_args()
 
 
@@ -59,7 +61,7 @@ async def main():
     YEAR = args.year
     ITER_NAME = args.iteration_name
     DEBUG = args.debug
-    JUMP_PROB = 0.8
+    PROB_RESAMPLE_LAYER = args.prob_resample
 
     logging_level = logging.DEBUG if DEBUG else logging.INFO
     logging.basicConfig(
@@ -94,7 +96,7 @@ async def main():
     N_WORKERS = get_n_cores(DRY_RUN)
 
     def walks_wrapper(users):
-        return create_walks_numba(users, WALK_LEN, layer_edge_dict_numba, JUMP_PROB, args.record_edge_types)
+        return create_walks_numba(users, WALK_LEN, layer_edge_dict_numba, PROB_RESAMPLE_LAYER, args.record_edge_types)
 
     _ = walks_wrapper(users_numba[:10])
     if args.record_edge_types:
@@ -122,7 +124,7 @@ async def main():
                     nodes=users_numba,
                     walk_len=WALK_LEN,
                     layer_edge_dict=layer_edge_dict_numba,
-                    p=JUMP_PROB
+                    p=PROB_RESAMPLE_LAYER
                     ) 
 
             logger.debug("Concatenating arrays")

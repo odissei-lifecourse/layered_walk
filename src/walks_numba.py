@@ -161,7 +161,7 @@ def create_walks_starting_from_layers(
         n_walks: Number of walks to generate for each layer.
         layer_edge_dict: Numba dictionary where keys are node identifiers and values are dictionaries 
         of non-empty edge lists for each layer.
-        p: probability of changing layer.
+        p: probability of resampling the layer at each node.
 
     Returns:
         np.ndarray: A 2-dimensional array where each row is a walk starting from 
@@ -169,8 +169,8 @@ def create_walks_starting_from_layers(
 
     Notes:
         The function calls `single_walk` from a random draw of the nodes that are connected
-        on each layer type. The layer identifier is then inserted at position 0 of the 
-        walk.
+        on each layer type. The layer identifier is then inserted at the start of 
+        the walk.
     """
 
     walks = List() 
